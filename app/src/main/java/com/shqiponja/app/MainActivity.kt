@@ -101,26 +101,41 @@ class MainActivity : Activity() {
                 }
             }
 
-        sendButton.setOnClickListener {
-            val number = phoneInput.text.toString().trim()
+        
+sendButton.setOnClickListener {
+    Toast.makeText(
+        this,
+        "Po përgatitet dërgimi i SMS...",
+        Toast.LENGTH_SHORT
+    ).show()
 
-            if (!number.startsWith("+") || number.length < 10) {
-                Toast.makeText(
-                    this,
-                    "Shkruaj numrin me prefiksin e shtetit, p.sh. +355",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
-                val options = PhoneAuthOptions.newBuilder(auth)
-                    .setPhoneNumber(number)
-                    .setTimeout(60L, TimeUnit.SECONDS)
-                    .setActivity(this)
-                    .setCallbacks(callbacks)
-                    .build()
+    try {
+        val number = phoneInput.text.toString().trim()
 
-                PhoneAuthProvider.verifyPhoneNumber(options)
-            }
+        if (!number.startsWith("+") || number.length < 10) {
+            Toast.makeText(
+                this,
+                "Shkruaj numrin me prefiks, p.sh. +355",
+                Toast.LENGTH_LONG
+            ).show()
+        } else {
+            val options = PhoneAuthOptions.newBuilder(auth)
+                .setPhoneNumber(number)
+                .setTimeout(60L, TimeUnit.SECONDS)
+                .setActivity(this)
+                .setCallbacks(callbacks)
+                .build()
+
+            PhoneAuthProvider.verifyPhoneNumber(options)
         }
+    } catch (e: Exception) {
+        Toast.makeText(
+            this,
+            "Gabim: ${e.message}",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+}
 
         verifyButton.setOnClickListener {
             val id = verificationId
