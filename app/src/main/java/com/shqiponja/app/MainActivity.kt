@@ -60,6 +60,12 @@ class MainActivity : Activity() {
 
         val sendButton = Button(this)
         sendButton.text = "DËRGO KODIN SMS"
+        val guestButton = Button(this)
+guestButton.text = "HYR SI VIZITOR 🦅"
+
+guestButton.setOnClickListener {
+    showHome()
+}
 
         codeInput = EditText(this)
         codeInput.hint = "Shkruaj kodin SMS"
