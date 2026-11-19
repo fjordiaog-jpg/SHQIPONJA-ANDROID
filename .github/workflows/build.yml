@@ -1,9 +1,10 @@
+
 name: Build SHQIPONJA APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -12,6 +13,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Check AndroidManifest
+        run: |
+          echo "Kontrolli i AndroidManifest.xml"
+          cat -n app/src/main/AndroidManifest.xml
+          xmllint --noout app/src/main/AndroidManifest.xml
 
       - name: Setup Java
         uses: actions/setup-java@v4
