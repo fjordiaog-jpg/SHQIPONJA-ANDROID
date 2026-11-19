@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1017744758840",
+    "project_id": "chat-shqiponja",
+    "storage_bucket": "chat-shqiponja.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1017744758840:android:205522586f69f6758feecd",
+        "android_client_info": {
+          "package_name": "com.shqiponja.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBR0t12cItHAvcrp6s5W_lyalGIm0Lha7o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
