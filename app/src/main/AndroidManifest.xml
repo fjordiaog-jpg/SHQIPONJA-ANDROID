@@ -1,34 +1,24 @@
-Skip to content
-SHQIPONJA-ANDROID
-Repository navigation
-Code
-Issues
-Pull requests
-Build SHQIPONJA APK
-Update build.yml #12
-Annotations
-1 error and 1 warning
-build
-failed now in 4s
-2s
-1s
-0s
-Run python3 -c "import xml.etree.ElementTree as ET; ET.parse('app/src/main/AndroidManifest.xml'); print('XML eshte ne rregull')"
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-    import xml.etree.ElementTree as ET; ET.parse('app/src/main/AndroidManifest.xml'); print('XML eshte ne rregull')
-                                        ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.14/xml/etree/ElementTree.py", line 1214, in parse
-    tree.parse(source, parser)
-    ~~~~~~~~~~^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.14/xml/etree/ElementTree.py", line 577, in parse
-    self._root = parser._parse_whole(source)
-                 ~~~~~~~~~~~~~~~~~~~^^^^^^^^
-xml.etree.ElementTree.ParseError: XML or text declaration not at start of entity: line 2, column 0
-Error: Process completed with exit code 1.
-0s
-0s
-0s
-0s
-0s
-0s
+
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:label="CHAT SHQIPONJA"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <activity
+            android:name="com.shqiponja.app.MainActivity"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+    </application>
+</manifest>
