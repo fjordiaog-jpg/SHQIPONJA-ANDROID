@@ -26,9 +26,10 @@ class MainActivity : Activity() {
     getSharedPreferences("crash_log", MODE_PRIVATE)
         .edit()
         .putString("last_crash", error.stackTraceToString())
-        .apply()
+        .commit()
 
     android.os.Process.killProcess(android.os.Process.myPid())
+    kotlin.system.exitProcess(10)
 }
 
         auth = FirebaseAuth.getInstance()
