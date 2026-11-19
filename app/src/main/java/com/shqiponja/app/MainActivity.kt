@@ -22,7 +22,15 @@ class MainActivity : Activity() {
     private lateinit var verifyButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+      super.onCreate(savedInstanceState)
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+    getSharedPreferences("crash_log", MODE_PRIVATE)
+        .edit()
+        .putString("last_crash", error.stackTraceToString())
+        .apply()
+
+    android.os.Process.killProcess(android.os.Process.myPid())
+}
 
         auth = FirebaseAuth.getInstance()
 
