@@ -101,12 +101,18 @@ if (!lastCrash.isNullOrBlank()) {
                 }
 
                 override fun onVerificationFailed(e: FirebaseException) {
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Gabim: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+    val kodi = if (e is com.google.firebase.auth.FirebaseAuthException) {
+        e.errorCode
+    } else {
+        e.javaClass.simpleName
+    }
+
+    android.app.AlertDialog.Builder(this@MainActivity)
+        .setTitle("Kodi i gabimit: $kodi")
+        .setMessage(e.message)
+        .setPositiveButton("OK", null)
+        .show()
+}
 
                 override fun onCodeSent(
                     id: String,
