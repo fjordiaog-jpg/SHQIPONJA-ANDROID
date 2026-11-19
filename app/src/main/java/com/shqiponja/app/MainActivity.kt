@@ -80,6 +80,7 @@ guestButton.setOnClickListener {
         layout.addView(subtitle)
         layout.addView(phoneInput)
         layout.addView(sendButton)
+        layout.addView(guestButton)
         layout.addView(codeInput)
         layout.addView(verifyButton)
 
