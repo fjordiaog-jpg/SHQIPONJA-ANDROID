@@ -2,6 +2,7 @@
 plugins {
     id("com.android.application") version "8.7.3"
     id("org.jetbrains.kotlin.android") version "2.0.21"
+    id("com.google.gms.google-services") version "4.4.2"
 }
 
 android {
@@ -24,4 +25,9 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+}
+
+dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
+    implementation("com.google.firebase:firebase-auth")
 }
