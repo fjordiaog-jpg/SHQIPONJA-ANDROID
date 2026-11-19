@@ -1,22 +1,15 @@
 
-name: Build SHQIPONJA APK
+name: SHQIPONJA SHA Fingerprints
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["main"]
 
 jobs:
-  build:
+  fingerprints:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Check AndroidManifest
-        run: |
-          python3 -c "import xml.etree.ElementTree as ET; ET.parse('app/src/main/AndroidManifest.xml'); print('XML eshte ne rregull')"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -24,14 +17,6 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Build APK
-        run: gradle assembleDebug --stacktrace
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: SHQIPONJA-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Generate SHA fingerprints
+        run: |
+          gradle :app:signingReport
