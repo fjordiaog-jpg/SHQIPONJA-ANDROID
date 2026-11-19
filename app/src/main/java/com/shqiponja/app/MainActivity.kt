@@ -1,4 +1,3 @@
-
 package com.shqiponja.app
 
 import android.app.Activity
@@ -75,7 +74,22 @@ class MainActivity : Activity() {
         layout.addView(verifyButton)
 
         setContentView(layout)
+        
+val lastCrash = getSharedPreferences("crash_log", MODE_PRIVATE)
+    .getString("last_crash", null)
 
+if (!lastCrash.isNullOrBlank()) {
+    val errorView = TextView(this)
+    errorView.text = "GABIMI I APLIKACIONIT:\n$lastCrash"
+    errorView.textSize = 12f
+    errorView.setTextColor(Color.RED)
+    layout.addView(errorView)
+
+    getSharedPreferences("crash_log", MODE_PRIVATE)
+        .edit()
+        .remove("last_crash")
+        .apply()
+}
         val callbacks =
             object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 
