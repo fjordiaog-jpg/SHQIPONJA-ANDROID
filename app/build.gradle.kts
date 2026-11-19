@@ -27,7 +27,7 @@ android {
     }
 }
 
-dependencies {
+dependencies {implementation("androidx.core:core:1.15.0")
     implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
     implementation("com.google.firebase:firebase-auth")
 }
