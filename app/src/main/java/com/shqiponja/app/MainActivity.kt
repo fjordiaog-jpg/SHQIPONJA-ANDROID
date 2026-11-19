@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import android.text.InputType
+import android.app.AlertDialog
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthOptions
@@ -20,20 +22,21 @@ class MainActivity : Activity() {
     private lateinit var codeInput: EditText
     private lateinit var verifyButton: Button
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-      super.onCreate(savedInstanceState)
-        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
-    getSharedPreferences("crash_log", MODE_PRIVATE)
-        .edit()
-        .putString("last_crash", error.stackTraceToString())
-        .commit()
+    private val green = Color.rgb(20, 130, 70)
 
-    android.os.Process.killProcess(android.os.Process.myPid())
-    kotlin.system.exitProcess(10)
-}
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
         auth = FirebaseAuth.getInstance()
 
+        if (auth.currentUser != null) {
+            showHome()
+        } else {
+            showLogin()
+        }
+    }
+
+    private fun showLogin() {
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
         layout.gravity = Gravity.CENTER
@@ -43,7 +46,7 @@ class MainActivity : Activity() {
         val title = TextView(this)
         title.text = "🦅 CHAT SHQIPONJA"
         title.textSize = 28f
-        title.setTextColor(Color.rgb(20, 130, 70))
+        title.setTextColor(green)
         title.gravity = Gravity.CENTER
 
         val subtitle = TextView(this)
@@ -53,14 +56,14 @@ class MainActivity : Activity() {
 
         val phoneInput = EditText(this)
         phoneInput.hint = "Numri yt, p.sh. +355691234567"
-        phoneInput.inputType = 3
+        phoneInput.inputType = InputType.TYPE_CLASS_PHONE
 
         val sendButton = Button(this)
         sendButton.text = "DËRGO KODIN SMS"
 
         codeInput = EditText(this)
         codeInput.hint = "Shkruaj kodin SMS"
-        codeInput.inputType = 2
+        codeInput.inputType = InputType.TYPE_CLASS_NUMBER
         codeInput.visibility = View.GONE
 
         verifyButton = Button(this)
@@ -75,22 +78,7 @@ class MainActivity : Activity() {
         layout.addView(verifyButton)
 
         setContentView(layout)
-        
-val lastCrash = getSharedPreferences("crash_log", MODE_PRIVATE)
-    .getString("last_crash", null)
 
-if (!lastCrash.isNullOrBlank()) {
-    val errorView = TextView(this)
-    errorView.text = "GABIMI I APLIKACIONIT:\n$lastCrash"
-    errorView.textSize = 12f
-    errorView.setTextColor(Color.RED)
-    layout.addView(errorView)
-
-    getSharedPreferences("crash_log", MODE_PRIVATE)
-        .edit()
-        .remove("last_crash")
-        .apply()
-}
         val callbacks =
             object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 
@@ -101,18 +89,19 @@ if (!lastCrash.isNullOrBlank()) {
                 }
 
                 override fun onVerificationFailed(e: FirebaseException) {
-    val kodi = if (e is com.google.firebase.auth.FirebaseAuthException) {
-        e.errorCode
-    } else {
-        e.javaClass.simpleName
-    }
+                    val kodi =
+                        if (e is com.google.firebase.auth.FirebaseAuthException) {
+                            e.errorCode
+                        } else {
+                            e.javaClass.simpleName
+                        }
 
-    android.app.AlertDialog.Builder(this@MainActivity)
-        .setTitle("Kodi i gabimit: $kodi")
-        .setMessage(e.message)
-        .setPositiveButton("OK", null)
-        .show()
-}
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Gabim: $kodi")
+                        .setMessage(e.message)
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
 
                 override fun onCodeSent(
                     id: String,
@@ -130,41 +119,26 @@ if (!lastCrash.isNullOrBlank()) {
                 }
             }
 
-        
-sendButton.setOnClickListener {
-    Toast.makeText(
-        this,
-        "Po përgatitet dërgimi i SMS...",
-        Toast.LENGTH_SHORT
-    ).show()
+        sendButton.setOnClickListener {
+            val number = phoneInput.text.toString().trim()
 
-    try {
-        val number = phoneInput.text.toString().trim()
+            if (!number.startsWith("+") || number.length < 10) {
+                Toast.makeText(
+                    this,
+                    "Shkruaj numrin me prefiks +355",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                val options = PhoneAuthOptions.newBuilder(auth)
+                    .setPhoneNumber(number)
+                    .setTimeout(60L, TimeUnit.SECONDS)
+                    .setActivity(this)
+                    .setCallbacks(callbacks)
+                    .build()
 
-        if (!number.startsWith("+") || number.length < 10) {
-            Toast.makeText(
-                this,
-                "Shkruaj numrin me prefiks, p.sh. +355",
-                Toast.LENGTH_LONG
-            ).show()
-        } else {
-            val options = PhoneAuthOptions.newBuilder(auth)
-                .setPhoneNumber(number)
-                .setTimeout(60L, TimeUnit.SECONDS)
-                .setActivity(this)
-                .setCallbacks(callbacks)
-                .build()
-
-            PhoneAuthProvider.verifyPhoneNumber(options)
+                PhoneAuthProvider.verifyPhoneNumber(options)
+            }
         }
-    } catch (e: Exception) {
-        Toast.makeText(
-            this,
-            "Gabim: ${e.message}",
-            Toast.LENGTH_LONG
-        ).show()
-    }
-}
 
         verifyButton.setOnClickListener {
             val id = verificationId
@@ -188,18 +162,106 @@ sendButton.setOnClickListener {
         auth.signInWithCredential(credential)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
-                    Toast.makeText(
-                        this,
-                        "Regjistrimi u krye me sukses! 🦅",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    showHome()
                 } else {
                     Toast.makeText(
                         this,
-                        "Verifikimi dështoi. Provo përsëri.",
+                        "Regjistrimi dështoi: ${task.exception?.message}",
                         Toast.LENGTH_LONG
                     ).show()
                 }
             }
+    }
+
+    private fun showHome() {
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setBackgroundColor(Color.WHITE)
+
+        val header = TextView(this)
+        header.text = "🦅 CHAT SHQIPONJA"
+        header.textSize = 26f
+        header.setTextColor(Color.WHITE)
+        header.setBackgroundColor(green)
+        header.gravity = Gravity.CENTER
+        header.setPadding(15, 25, 15, 25)
+
+        val subtitle = TextView(this)
+        subtitle.text = "Bisedat e tua"
+        subtitle.textSize = 21f
+        subtitle.setTextColor(Color.BLACK)
+        subtitle.setPadding(20, 20, 20, 10)
+
+        val profileButton = Button(this)
+        profileButton.text = "PROFILI IM"
+
+        profileButton.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Profili im 🦅")
+                .setMessage(
+                    "CHAT SHQIPONJA\n\nNumri: ${
+                        auth.currentUser?.phoneNumber ?: "Pa numër"
+                    }"
+                )
+                .setPositiveButton("MBYLL", null)
+                .show()
+        }
+
+        val newChatButton = Button(this)
+        newChatButton.text = "＋ BISEDË E RE"
+
+        val chatList = LinearLayout(this)
+        chatList.orientation = LinearLayout.VERTICAL
+        chatList.setPadding(20, 15, 20, 15)
+
+        val emptyText = TextView(this)
+        emptyText.text = "Nuk ke ende biseda.\nFillo një bisedë të re!"
+        emptyText.textSize = 17f
+        emptyText.gravity = Gravity.CENTER
+        emptyText.setPadding(10, 50, 10, 50)
+        chatList.addView(emptyText)
+
+        newChatButton.setOnClickListener {
+            val input = EditText(this)
+            input.hint = "Shkruaj emrin e kontaktit"
+
+            AlertDialog.Builder(this)
+                .setTitle("Bisedë e re")
+                .setView(input)
+                .setPositiveButton("KRIJO") { _, _ ->
+                    val name = input.text.toString().trim()
+
+                    if (name.isNotEmpty()) {
+                        if (chatList.childCount == 1 &&
+                            chatList.getChildAt(0) === emptyText
+                        ) {
+                            chatList.removeAllViews()
+                        }
+
+                        val contact = TextView(this)
+                        contact.text = "👤  $name\n      Bisedë e re"
+                        contact.textSize = 18f
+                        contact.setTextColor(Color.BLACK)
+                        contact.setPadding(15, 20, 15, 20)
+                        chatList.addView(contact)
+
+                        Toast.makeText(
+                            this,
+                            "Kontakti u shtua në listën lokale",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+                .setNegativeButton("ANULO", null)
+                .show()
+        }
+
+        layout.addView(header)
+        layout.addView(subtitle)
+        layout.addView(profileButton)
+        layout.addView(newChatButton)
+        layout.addView(chatList)
+
+        setContentView(layout)
     }
 }
