@@ -83,6 +83,7 @@ class MainActivity : Activity() {
             )
 
             zegoInitialized = true
+
         } catch (e: Exception) {
             toast("Gabim në inicializimin ZEGO: ${e.message}")
         }
@@ -110,6 +111,7 @@ class MainActivity : Activity() {
         }
     }
 
+    // BUTONAT E TELEFONATAVE ZEGO
     private fun createCallButton(
         otherUserId: String,
         otherUsername: String,
@@ -145,6 +147,37 @@ class MainActivity : Activity() {
         shape.cornerRadius = 18f
 
         button.background = shape
+
+        // Çaktivizo mesazhet automatike të gabimit të ZEGO-s.
+        // Gabimin do ta shfaqim vetë me callback.
+        button.showErrorToast(false)
+
+        // Kontrollo rezultatin e dërgimit të ftesës.
+        button.setOnClickListener {
+            errorCode,
+            errorMessage,
+            errorInvitees ->
+
+            runOnUiThread {
+
+                if (errorCode == 0) {
+
+                    if (errorInvitees.isEmpty()) {
+                        toast("Ftesa u dërgua me sukses!")
+                    } else {
+                        toast(
+                            "Disa ftesa nuk u dërguan: ${errorInvitees.size}"
+                        )
+                    }
+
+                } else {
+
+                    toast(
+                        "Gabim ZEGO: $errorCode\n$errorMessage"
+                    )
+                }
+            }
+        }
 
         return button
     }
@@ -215,6 +248,7 @@ class MainActivity : Activity() {
 
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this) { task ->
+
                     if (task.isSuccessful) {
                         saveUserProfile()
                         initializeZego()
@@ -237,6 +271,7 @@ class MainActivity : Activity() {
 
             auth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this) { task ->
+
                     if (task.isSuccessful) {
                         saveUserProfile()
                         initializeZego()
@@ -328,6 +363,7 @@ class MainActivity : Activity() {
                 } catch (e: Exception) {
                     toast("Gabim gjatë mbylljes së ZEGO-s")
                 }
+
                 zegoInitialized = false
             }
 
@@ -477,7 +513,9 @@ class MainActivity : Activity() {
             .setTitle("Kërko kontakt 🦅")
             .setView(input)
             .setPositiveButton("KËRKO") { _, _ ->
+
                 val query = input.text.toString().trim()
+
                 if (query.isNotEmpty()) {
                     searchUser(query)
                 }
@@ -528,8 +566,10 @@ class MainActivity : Activity() {
                         .setMessage("Nuk u gjet asnjë përdorues.")
                         .setPositiveButton("MBYLL", null)
                         .show()
+
                 } else {
                     val user = otherUsers.first()
+
                     val foundUsername =
                         user.getString("username") ?: "Përdorues"
 
@@ -795,8 +835,10 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         messagesListener?.remove()
         chatsListener?.remove()
+
         messagesListener = null
         chatsListener = null
+
         super.onDestroy()
     }
 }
