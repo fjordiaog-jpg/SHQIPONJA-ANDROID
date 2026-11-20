@@ -14,6 +14,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 class MainActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
+    private lateinit var db: FirebaseFirestore
     private val green = Color.rgb(20, 130, 70)
 
     override fun onCreate(savedInstanceState: Bundle?) {
