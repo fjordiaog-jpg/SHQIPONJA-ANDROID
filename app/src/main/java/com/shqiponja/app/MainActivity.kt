@@ -35,6 +35,7 @@ class MainActivity : Activity() {
     private val black = Color.rgb(20, 20, 20)
     private val white = Color.WHITE
     private val green = Color.rgb(20, 155, 85)
+    private val gold = Color.rgb(220, 175, 65)
 
     private val zegoResourceId = "shqiponja_call"
 
@@ -44,14 +45,14 @@ class MainActivity : Activity() {
     private var zegoInitialized = false
     private var zegoInitializing = false
 
-    // REGJISTRON GABIMET QE MBYLLIN APLIKACIONIN
+    private var selectedHomeTab = "chats"
+
     private fun installCrashLogger() {
         val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
 
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
                 val crashFile = java.io.File(filesDir, "last_crash.txt")
-
                 crashFile.writeText(
                     "CHAT SHQIPONJA - GABIM I REGJISTRUAR\n" +
                     "Koha: ${java.util.Date()}\n" +
@@ -70,15 +71,12 @@ class MainActivity : Activity() {
         }
     }
 
-    // SHFAQ GABIMIN E RUAJTUR
     private fun showSavedCrashIfAny() {
         try {
             val crashFile = java.io.File(filesDir, "last_crash.txt")
-
             if (!crashFile.exists()) return
 
             val crashText = crashFile.readText()
-
             if (crashText.isBlank()) return
 
             val textView = TextView(this)
@@ -109,7 +107,6 @@ class MainActivity : Activity() {
                                 crashText
                             )
                         )
-
                         toast("Gabimi u kopjua. Ma dërgo tekstin.")
                     } catch (e: Throwable) {
                         toast("Nuk u kopjua gabimi.")
@@ -117,7 +114,6 @@ class MainActivity : Activity() {
                 }
                 .setNegativeButton("MBYLL", null)
                 .show()
-
         } catch (e: Throwable) {
         }
     }
@@ -140,7 +136,6 @@ class MainActivity : Activity() {
             window.decorView.post {
                 showSavedCrashIfAny()
             }
-
         } catch (e: Throwable) {
             Toast.makeText(
                 this,
@@ -188,7 +183,6 @@ class MainActivity : Activity() {
             )
 
             zegoInitialized = true
-
         } catch (e: Throwable) {
             toast("Gabim ZEGO: ${e.message}")
         } finally {
@@ -259,9 +253,7 @@ class MainActivity : Activity() {
         return button
     }
 
-    // HYRJA E RE - PAMJE MODERNE SHQIPONJA
     private fun showLogin() {
-
         val density = resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
 
@@ -270,7 +262,7 @@ class MainActivity : Activity() {
         root.gravity = Gravity.CENTER
         root.setPadding(dp(22), dp(20), dp(22), dp(20))
 
-        val gradient = GradientDrawable(
+        root.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(
                 Color.rgb(8, 8, 8),
@@ -278,7 +270,6 @@ class MainActivity : Activity() {
                 Color.rgb(12, 12, 12)
             )
         )
-        root.background = gradient
 
         val scroll = ScrollView(this)
         scroll.isFillViewport = true
@@ -288,18 +279,12 @@ class MainActivity : Activity() {
         content.gravity = Gravity.CENTER
         content.setPadding(dp(5), dp(15), dp(5), dp(15))
 
-        // SHQIPONJA
         val eagle = TextView(this)
         eagle.text = "🦅"
         eagle.textSize = 75f
         eagle.gravity = Gravity.CENTER
+        content.addView(eagle)
 
-        content.addView(
-            eagle,
-            LinearLayout.LayoutParams(-1, -2)
-        )
-
-        // TITULLI
         val title = TextView(this)
         title.text = "CHAT SHQIPONJA"
         title.textSize = 29f
@@ -310,11 +295,7 @@ class MainActivity : Activity() {
         )
         title.gravity = Gravity.CENTER
         title.letterSpacing = 0.08f
-
-        content.addView(
-            title,
-            LinearLayout.LayoutParams(-1, -2)
-        )
+        content.addView(title)
 
         val subtitle = TextView(this)
         subtitle.text = "LIDHJE  •  KOMUNIKIM  •  BESIM"
@@ -323,10 +304,8 @@ class MainActivity : Activity() {
         subtitle.gravity = Gravity.CENTER
         subtitle.letterSpacing = 0.12f
         subtitle.setPadding(0, dp(10), 0, dp(25))
-
         content.addView(subtitle)
 
-        // KARTA E HYRJES
         val card = LinearLayout(this)
         card.orientation = LinearLayout.VERTICAL
         card.setPadding(dp(22), dp(25), dp(22), dp(22))
@@ -334,10 +313,7 @@ class MainActivity : Activity() {
         val cardBackground = GradientDrawable()
         cardBackground.setColor(Color.rgb(29, 29, 29))
         cardBackground.cornerRadius = dp(22).toFloat()
-        cardBackground.setStroke(
-            dp(1),
-            Color.rgb(125, 95, 45)
-        )
+        cardBackground.setStroke(dp(1), Color.rgb(125, 95, 45))
         card.background = cardBackground
         card.elevation = dp(8).toFloat()
 
@@ -347,7 +323,6 @@ class MainActivity : Activity() {
         welcome.setTextColor(Color.rgb(235, 185, 65))
         welcome.typeface = Typeface.DEFAULT_BOLD
         welcome.gravity = Gravity.CENTER
-
         card.addView(welcome)
 
         val description = TextView(this)
@@ -356,15 +331,9 @@ class MainActivity : Activity() {
         description.setTextColor(Color.LTGRAY)
         description.gravity = Gravity.CENTER
         description.setPadding(0, dp(8), 0, dp(22))
-
         card.addView(description)
 
-        // FUSHA E EMAILIT
-        fun makeInput(
-            hintText: String,
-            type: Int
-        ): EditText {
-
+        fun makeInput(hintText: String, type: Int): EditText {
             val input = EditText(this)
             input.hint = hintText
             input.textSize = 15f
@@ -377,18 +346,11 @@ class MainActivity : Activity() {
             val inputBackground = GradientDrawable()
             inputBackground.setColor(Color.rgb(45, 45, 45))
             inputBackground.cornerRadius = dp(13).toFloat()
-            inputBackground.setStroke(
-                dp(1),
-                Color.rgb(90, 75, 55)
-            )
+            inputBackground.setStroke(dp(1), Color.rgb(90, 75, 55))
             input.background = inputBackground
 
-            val params = LinearLayout.LayoutParams(
-                -1,
-                dp(55)
-            )
+            val params = LinearLayout.LayoutParams(-1, dp(55))
             params.setMargins(0, dp(7), 0, dp(12))
-
             card.addView(input, params)
 
             return input
@@ -406,13 +368,11 @@ class MainActivity : Activity() {
                 InputType.TYPE_TEXT_VARIATION_PASSWORD
         )
 
-        // BUTONAT
         fun makeButton(
             text: String,
             color: Int,
             textColor: Int
         ): Button {
-
             val button = Button(this)
             button.text = text
             button.textSize = 14f
@@ -424,15 +384,10 @@ class MainActivity : Activity() {
             buttonBackground.setColor(color)
             buttonBackground.cornerRadius = dp(14).toFloat()
             button.background = buttonBackground
-
             button.elevation = dp(3).toFloat()
 
-            val params = LinearLayout.LayoutParams(
-                -1,
-                dp(53)
-            )
+            val params = LinearLayout.LayoutParams(-1, dp(53))
             params.setMargins(0, dp(7), 0, dp(7))
-
             card.addView(button, params)
 
             return button
@@ -456,10 +411,7 @@ class MainActivity : Activity() {
             Color.WHITE
         )
 
-        content.addView(
-            card,
-            LinearLayout.LayoutParams(-1, -2)
-        )
+        content.addView(card, LinearLayout.LayoutParams(-1, -2))
 
         val footer = TextView(this)
         footer.text = "🦅  SHQIPONJA  •  KOMUNIKO PA KUFIJ"
@@ -468,18 +420,12 @@ class MainActivity : Activity() {
         footer.gravity = Gravity.CENTER
         footer.setPadding(0, dp(25), 0, dp(10))
         footer.letterSpacing = 0.05f
-
         content.addView(footer)
 
         scroll.addView(content)
-        root.addView(
-            scroll,
-            LinearLayout.LayoutParams(-1, -1)
-        )
-
+        root.addView(scroll, LinearLayout.LayoutParams(-1, -1))
         setContentView(root)
 
-        // REGJISTRIMI
         registerButton.setOnClickListener {
             val email = emailInput.text.toString().trim()
             val password = passwordInput.text.toString()
@@ -504,7 +450,6 @@ class MainActivity : Activity() {
                 }
         }
 
-        // HYRJA
         loginButton.setOnClickListener {
             val email = emailInput.text.toString().trim()
             val password = passwordInput.text.toString()
@@ -529,14 +474,15 @@ class MainActivity : Activity() {
                 }
         }
 
-        // VIZITOR
         guestButton.setOnClickListener {
             showHome()
         }
     }
 
-    // LISTA E BISEDAVE ME AVATARË RRETHORË
-    private fun showHome() {
+    // EKRANI KRYESOR ME KATEGORITE POSHTE
+    private fun showHome(tab: String = selectedHomeTab) {
+        selectedHomeTab = tab
+
         messagesListener?.remove()
         messagesListener = null
 
@@ -552,41 +498,169 @@ class MainActivity : Activity() {
         layout.orientation = LinearLayout.VERTICAL
         layout.setBackgroundColor(black)
 
-        val header = TextView(this)
-        header.text = "🦅 SHQIPONJA"
-        header.textSize = 27f
-        header.typeface = Typeface.DEFAULT_BOLD
-        header.setTextColor(white)
+        // KRYESEKRENI - TITULLI LART MAJTAS
+        val header = LinearLayout(this)
+        header.orientation = LinearLayout.HORIZONTAL
+        header.gravity = Gravity.CENTER_VERTICAL
+        header.setPadding(dp(16), dp(12), dp(12), dp(12))
         header.setBackgroundColor(red)
-        header.gravity = Gravity.CENTER
-        header.setPadding(15, 25, 15, 25)
 
-        val profileButton = Button(this)
-        profileButton.text = "PROFILI IM"
+        val title = TextView(this)
+        title.text = "CHAT SHQIPONJA"
+        title.textSize = 22f
+        title.typeface = Typeface.DEFAULT_BOLD
+        title.setTextColor(white)
+        title.gravity = Gravity.CENTER_VERTICAL
+
+        header.addView(
+            title,
+            LinearLayout.LayoutParams(0, -2, 1f)
+        )
+
+        val profileButton = TextView(this)
+        profileButton.text = "👤"
+        profileButton.textSize = 25f
+        profileButton.gravity = Gravity.CENTER
+        profileButton.setPadding(dp(10), dp(5), dp(10), dp(5))
 
         profileButton.setOnClickListener {
-            val email = auth.currentUser?.email ?: "Vizitor"
-
-            AlertDialog.Builder(this)
-                .setTitle("Profili im 🦅")
-                .setMessage("SHQIPONJA\n\nEmail: $email")
-                .setPositiveButton("MBYLL", null)
-                .show()
+            showProfileDialog()
         }
+
+        header.addView(profileButton)
+
+        // HAPESIRA E KATEGORISE
+        val content = FrameLayout(this)
+        content.setBackgroundColor(black)
+
+        // NAVIGIMI POSHTE
+        val bottomNav = LinearLayout(this)
+        bottomNav.orientation = LinearLayout.HORIZONTAL
+        bottomNav.gravity = Gravity.CENTER
+        bottomNav.setBackgroundColor(Color.rgb(30, 30, 30))
+        bottomNav.setPadding(dp(5), dp(7), dp(5), dp(7))
+
+        fun makeTab(
+            icon: String,
+            label: String,
+            tabName: String
+        ): LinearLayout {
+            val selected = selectedHomeTab == tabName
+
+            val tab = LinearLayout(this)
+            tab.orientation = LinearLayout.VERTICAL
+            tab.gravity = Gravity.CENTER
+            tab.setPadding(dp(10), dp(7), dp(10), dp(7))
+
+            val tabBackground = GradientDrawable()
+            tabBackground.cornerRadius = dp(18).toFloat()
+            tabBackground.setColor(
+                if (selected) Color.rgb(75, 25, 30)
+                else Color.TRANSPARENT
+            )
+            tab.background = tabBackground
+
+            val iconView = TextView(this)
+            iconView.text = icon
+            iconView.textSize = 21f
+            iconView.gravity = Gravity.CENTER
+            iconView.setTextColor(
+                if (selected) gold else Color.LTGRAY
+            )
+
+            val labelView = TextView(this)
+            labelView.text = label
+            labelView.textSize = 13f
+            labelView.typeface = Typeface.DEFAULT_BOLD
+            labelView.gravity = Gravity.CENTER
+            labelView.setTextColor(
+                if (selected) gold else Color.LTGRAY
+            )
+
+            tab.addView(iconView)
+            tab.addView(labelView)
+
+            tab.setOnClickListener {
+                if (selectedHomeTab != tabName) {
+                    showHome(tabName)
+                }
+            }
+
+            return tab
+        }
+
+        bottomNav.addView(
+            makeTab("💬", "Chats", "chats"),
+            LinearLayout.LayoutParams(0, -2, 1f)
+        )
+
+        bottomNav.addView(
+            makeTab("📞", "Calls", "calls"),
+            LinearLayout.LayoutParams(0, -2, 1f)
+        )
+
+        layout.addView(header)
+
+        layout.addView(
+            content,
+            LinearLayout.LayoutParams(-1, 0, 1f)
+        )
+
+        layout.addView(bottomNav)
+
+        setContentView(layout)
+
+        if (selectedHomeTab == "calls") {
+            showCallsPage(content)
+            return
+        }
+
+        showChatsPage(content, uid)
+    }
+
+    // KATEGORIA CHATS
+    private fun showChatsPage(
+        content: FrameLayout,
+        uid: String?
+    ) {
+        val density = resources.displayMetrics.density
+        fun dp(value: Int): Int = (value * density).toInt()
+
+        val page = LinearLayout(this)
+        page.orientation = LinearLayout.VERTICAL
+        page.setBackgroundColor(black)
+
+        val actions = LinearLayout(this)
+        actions.orientation = LinearLayout.HORIZONTAL
+        actions.gravity = Gravity.CENTER
+        actions.setPadding(dp(8), dp(5), dp(8), dp(5))
 
         val newChatButton = Button(this)
         newChatButton.text = "＋ BISEDË E RE"
+        newChatButton.isAllCaps = false
         newChatButton.setOnClickListener { askUsername() }
 
         val searchButton = Button(this)
-        searchButton.text = "🔎 KËRKO KONTAKT"
+        searchButton.text = "🔎 KËRKO"
+        searchButton.isAllCaps = false
         searchButton.setOnClickListener { askUsername() }
+
+        actions.addView(
+            newChatButton,
+            LinearLayout.LayoutParams(0, -2, 1f)
+        )
+
+        actions.addView(
+            searchButton,
+            LinearLayout.LayoutParams(0, -2, 1f)
+        )
 
         val subtitle = TextView(this)
         subtitle.text = "BISEDAT E MIA"
-        subtitle.textSize = 19f
+        subtitle.textSize = 17f
+        subtitle.typeface = Typeface.DEFAULT_BOLD
         subtitle.setTextColor(white)
-        subtitle.setPadding(18, 15, 10, 10)
+        subtitle.setPadding(dp(16), dp(12), dp(10), dp(8))
 
         val scroll = ScrollView(this)
 
@@ -596,40 +670,17 @@ class MainActivity : Activity() {
 
         scroll.addView(chatList)
 
-        val logoutButton = Button(this)
-        logoutButton.text = "DIL NGA LLOGARIA"
-
-        logoutButton.setOnClickListener {
-            chatsListener?.remove()
-            messagesListener?.remove()
-
-            if (zegoInitialized) {
-                try {
-                    ZegoUIKitPrebuiltCallService.unInit()
-                } catch (e: Throwable) {
-                    toast("Gabim gjatë mbylljes së ZEGO-s")
-                }
-                zegoInitialized = false
-            }
-
-            auth.signOut()
-            showLogin()
-        }
-
-        layout.addView(header)
-        layout.addView(profileButton)
-        layout.addView(newChatButton)
-        layout.addView(searchButton)
-        layout.addView(subtitle)
-
-        layout.addView(
+        page.addView(actions)
+        page.addView(subtitle)
+        page.addView(
             scroll,
             LinearLayout.LayoutParams(-1, 0, 1f)
         )
 
-        layout.addView(logoutButton)
-
-        setContentView(layout)
+        content.addView(
+            page,
+            FrameLayout.LayoutParams(-1, -1)
+        )
 
         if (uid == null) {
             chatList.addView(
@@ -663,7 +714,6 @@ class MainActivity : Activity() {
                 }
 
                 documents.forEach { document ->
-
                     val participants =
                         document.get("participants") as? List<*>
                             ?: emptyList<Any>()
@@ -698,10 +748,8 @@ class MainActivity : Activity() {
                                             ?.getString("text")
                                             ?: "Fillo bisedën"
 
-                                    // RRESHTI I KONTAKTIT
                                     val row = LinearLayout(this)
-                                    row.orientation =
-                                        LinearLayout.HORIZONTAL
+                                    row.orientation = LinearLayout.HORIZONTAL
                                     row.gravity = Gravity.CENTER_VERTICAL
                                     row.setPadding(
                                         dp(12),
@@ -713,7 +761,6 @@ class MainActivity : Activity() {
                                         Color.rgb(38, 38, 38)
                                     )
 
-                                    // AVATAR RRETHOR ME SHQIPONJË
                                     val avatar = TextView(this)
                                     avatar.text = "🦅"
                                     avatar.textSize = 27f
@@ -731,7 +778,7 @@ class MainActivity : Activity() {
 
                                     avatarBackground.setStroke(
                                         dp(2),
-                                        Color.rgb(220, 175, 65)
+                                        gold
                                     )
 
                                     avatar.background = avatarBackground
@@ -749,12 +796,8 @@ class MainActivity : Activity() {
                                         0
                                     )
 
-                                    row.addView(
-                                        avatar,
-                                        avatarParams
-                                    )
+                                    row.addView(avatar, avatarParams)
 
-                                    // EMRI DHE MESAZHI I FUNDIT
                                     val textLayout = LinearLayout(this)
                                     textLayout.orientation =
                                         LinearLayout.VERTICAL
@@ -762,8 +805,7 @@ class MainActivity : Activity() {
                                     val name = TextView(this)
                                     name.text = "@$username"
                                     name.textSize = 18f
-                                    name.typeface =
-                                        Typeface.DEFAULT_BOLD
+                                    name.typeface = Typeface.DEFAULT_BOLD
                                     name.setTextColor(white)
                                     name.maxLines = 1
 
@@ -789,10 +831,7 @@ class MainActivity : Activity() {
                                     )
 
                                     val params =
-                                        LinearLayout.LayoutParams(
-                                            -1,
-                                            -2
-                                        )
+                                        LinearLayout.LayoutParams(-1, -2)
 
                                     params.setMargins(
                                         dp(3),
@@ -814,6 +853,93 @@ class MainActivity : Activity() {
                         }
                 }
             }
+    }
+
+    // KATEGORIA CALLS
+    private fun showCallsPage(content: FrameLayout) {
+        val density = resources.displayMetrics.density
+        fun dp(value: Int): Int = (value * density).toInt()
+
+        val page = LinearLayout(this)
+        page.orientation = LinearLayout.VERTICAL
+        page.gravity = Gravity.CENTER
+        page.setPadding(dp(25), dp(20), dp(25), dp(20))
+        page.setBackgroundColor(black)
+
+        val icon = TextView(this)
+        icon.text = "📞"
+        icon.textSize = 65f
+        icon.gravity = Gravity.CENTER
+        page.addView(icon)
+
+        val title = TextView(this)
+        title.text = "Telefonatat"
+        title.textSize = 24f
+        title.typeface = Typeface.DEFAULT_BOLD
+        title.setTextColor(white)
+        title.gravity = Gravity.CENTER
+        title.setPadding(0, dp(12), 0, dp(8))
+        page.addView(title)
+
+        val description = TextView(this)
+        description.text =
+            "Këtu do të shfaqet historiku i telefonatave.\n\n" +
+            "Për të telefonuar një kontakt, hap kategorinë Chats " +
+            "dhe zgjidh personin që dëshiron të telefonosh."
+        description.textSize = 15f
+        description.setTextColor(Color.LTGRAY)
+        description.gravity = Gravity.CENTER
+        description.setPadding(0, dp(8), 0, dp(20))
+        page.addView(description)
+
+        val chatsButton = Button(this)
+        chatsButton.text = "HAP CHATS"
+        chatsButton.isAllCaps = false
+        chatsButton.setOnClickListener {
+            showHome("chats")
+        }
+        page.addView(
+            chatsButton,
+            LinearLayout.LayoutParams(-1, dp(52))
+        )
+
+        content.addView(
+            page,
+            FrameLayout.LayoutParams(-1, -1)
+        )
+    }
+
+    private fun showProfileDialog() {
+        val email = auth.currentUser?.email ?: "Vizitor"
+
+        AlertDialog.Builder(this)
+            .setTitle("Profili im 🦅")
+            .setMessage("CHAT SHQIPONJA\n\nEmail: $email")
+            .setPositiveButton("MBYLL", null)
+            .setNeutralButton("DIL NGA LLOGARIA") { _, _ ->
+                logout()
+            }
+            .show()
+    }
+
+    private fun logout() {
+        chatsListener?.remove()
+        messagesListener?.remove()
+
+        chatsListener = null
+        messagesListener = null
+
+        if (zegoInitialized) {
+            try {
+                ZegoUIKitPrebuiltCallService.unInit()
+            } catch (e: Throwable) {
+                toast("Gabim gjatë mbylljes së ZEGO-s")
+            }
+            zegoInitialized = false
+        }
+
+        auth.signOut()
+        showLogin()
     }
 
     private fun makeLabel(text: String): TextView {
@@ -962,7 +1088,7 @@ class MainActivity : Activity() {
         header.setBackgroundColor(red)
         header.gravity = Gravity.CENTER_VERTICAL
         header.setPadding(20, 22, 20, 22)
-        header.setOnClickListener { showHome() }
+        header.setOnClickListener { showHome("chats") }
 
         val callLayout = LinearLayout(this)
         callLayout.orientation = LinearLayout.HORIZONTAL
@@ -982,18 +1108,10 @@ class MainActivity : Activity() {
             true
         )
 
-        val voiceParams = LinearLayout.LayoutParams(
-            0,
-            58,
-            1f
-        )
+        val voiceParams = LinearLayout.LayoutParams(0, 58, 1f)
         voiceParams.setMargins(5, 0, 8, 0)
 
-        val videoParams = LinearLayout.LayoutParams(
-            0,
-            58,
-            1f
-        )
+        val videoParams = LinearLayout.LayoutParams(0, 58, 1f)
         videoParams.setMargins(8, 0, 5, 0)
 
         callLayout.addView(voiceCall, voiceParams)
@@ -1093,7 +1211,6 @@ class MainActivity : Activity() {
                 messageList.removeAllViews()
 
                 snapshots?.documents?.forEach { document ->
-
                     val senderId =
                         document.getString("senderId") ?: ""
 
