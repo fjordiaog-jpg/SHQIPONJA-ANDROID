@@ -27,8 +27,13 @@ android {
     }
 }
 
-dependencies {implementation("androidx.core:core:1.15.0")
+dependencies {
+    implementation("androidx.core:core:1.15.0")
+
     implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
     implementation("com.google.firebase:firebase-auth")
-implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-firestore")
+
+    // ZEGO Audio and Video Call
+    implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:1.0.2")
 }
