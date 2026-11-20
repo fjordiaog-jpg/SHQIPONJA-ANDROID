@@ -1,4 +1,3 @@
-
 package com.shqiponja.app
 
 import android.app.Activity
@@ -288,12 +287,43 @@ private fun saveUserProfile() {
 
                 AlertDialog.Builder(this)
                     .setTitle("Përdoruesi u gjet! 🦅")
-                    .setMessage("Username: @$foundUsername")
-                    .setPositiveButton("MBYLL", null)
-                    .show()
+.setMessage("Username: @$foundUsername")
+.setPositiveButton("HAP BISEDË") { _, _ ->
+    openChat(user.id, foundUsername)
+}
+.setNegativeButton("MBYLL", null)
+.show()
             }
         }
         .addOnFailureListener {
             Toast.makeText(this, "Gabim gjatë kërkimit: ${it.message}", Toast.LENGTH_LONG).show()
+        }
+}private fun openChat(otherUserId: String, otherUsername: String) {
+    val currentUserId = auth.currentUser?.uid ?: return
+
+    val participants = listOf(currentUserId, otherUserId).sorted()
+    val chatId = participants.joinToString("_")
+
+    val chatData = hashMapOf(
+        "participants" to participants,
+        "createdAt" to System.currentTimeMillis()
+    )
+
+    db.collection("chats")
+        .document(chatId)
+        .set(chatData, com.google.firebase.firestore.SetOptions.merge())
+        .addOnSuccessListener {
+            Toast.makeText(
+                this,
+                "Biseda me @$otherUsername u krijua!",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        .addOnFailureListener {
+            Toast.makeText(
+                this,
+                "Gabim: ${it.message}",
+                Toast.LENGTH_LONG
+            ).show()
         }
 } }
