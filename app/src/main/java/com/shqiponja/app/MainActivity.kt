@@ -174,6 +174,27 @@ class MainActivity : Activity() {
 
         val newChatButton = Button(this)
         newChatButton.text = "＋ BISEDË E RE"
+        val searchButton = Button(this)
+searchButton.text = "🔎 KËRKO KONTAKT"
+        searchButton.setOnClickListener {
+    val input = EditText(this)
+    input.hint = "Shkruaj username ose email"
+
+    AlertDialog.Builder(this)
+        .setTitle("🔎 Kërko kontakt")
+        .setView(input)
+        .setPositiveButton("KËRKO") { _, _ ->
+            val query = input.text.toString().trim()
+
+            if (query.isNotEmpty()) {
+                searchUser(query)
+            } else {
+                Toast.makeText(this, "Shkruaj username ose email", Toast.LENGTH_SHORT).show()
+            }
+        }
+        .setNegativeButton("ANULO", null)
+        .show()
+}
 
         val chatList = LinearLayout(this)
         chatList.orientation = LinearLayout.VERTICAL
@@ -221,6 +242,7 @@ class MainActivity : Activity() {
         layout.addView(subtitle)
         layout.addView(profileButton)
         layout.addView(newChatButton)
+        layout.addView(searchButton)
         layout.addView(chatList)
         layout.addView(logoutButton)
 
@@ -238,4 +260,40 @@ private fun saveUserProfile() {
     db.collection("users")
         .document(user.uid)
         .set(userData)
-}}
+}private fun searchUser(query: String) {
+    val username = query.removePrefix("@").trim().lowercase()
+
+    if (auth.currentUser == null) {
+        Toast.makeText(this, "Duhet të hysh në llogari", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    db.collection("users")
+        .whereEqualTo("username", username)
+        .get()
+        .addOnSuccessListener { documents ->
+
+            val otherUsers = documents.filter {
+                it.getString("uid") != auth.currentUser?.uid
+            }
+
+            if (otherUsers.isEmpty()) {
+                AlertDialog.Builder(this)
+                    .setMessage("Nuk u gjet asnjë përdorues.")
+                    .setPositiveButton("MBYLL", null)
+                    .show()
+            } else {
+                val user = otherUsers.first()
+                val foundUsername = user.getString("username") ?: "Përdorues"
+
+                AlertDialog.Builder(this)
+                    .setTitle("Përdoruesi u gjet! 🦅")
+                    .setMessage("Username: @$foundUsername")
+                    .setPositiveButton("MBYLL", null)
+                    .show()
+            }
+        }
+        .addOnFailureListener {
+            Toast.makeText(this, "Gabim gjatë kërkimit: ${it.message}", Toast.LENGTH_LONG).show()
+        }
+} }
