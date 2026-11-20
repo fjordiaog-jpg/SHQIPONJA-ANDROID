@@ -1419,13 +1419,13 @@ class MainActivity : Activity() {
         voiceButton.gravity = Gravity.CENTER
         voiceButton.setTextColor(Color.WHITE)
 
-        val voiceParams = LinearLayout.LayoutParams(
+        val voiceButtonParams = LinearLayout.LayoutParams(
             dp(42),
             dp(48)
         )
-        voiceParams.setMargins(dp(3), 0, 0, 0)
+        voiceButtonParams.setMargins(dp(3), 0, 0, 0)
 
-        inputPanel.addView(voiceButton, voiceParams)
+        inputPanel.addView(voiceButton, voiceButtonParams)
 
         // BUTONI UPLOAD
         val uploadButton = TextView(this)
