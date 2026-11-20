@@ -225,3 +225,17 @@ class MainActivity : Activity() {
         setContentView(layout)
     }
 }
+private fun saveUserProfile() {
+    val user = auth.currentUser ?: return
+
+    val userData = hashMapOf(
+        "uid" to user.uid,
+        "email" to user.email,
+        "username" to (user.email?.substringBefore("@") ?: "user"),
+        "createdAt" to System.currentTimeMillis()
+    )
+
+    db.collection("users")
+        .document(user.uid)
+        .set(userData)
+}
