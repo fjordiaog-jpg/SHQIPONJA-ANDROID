@@ -89,8 +89,9 @@ class MainActivity : Activity() {
                 auth.createUserWithEmailAndPassword(email, password)
                     .addOnCompleteListener(this) { task ->
                         if (task.isSuccessful) {
-                            showHome()
-                        } else {
+    saveUserProfile()
+    showHome()
+} else {
                             Toast.makeText(
                                 this,
                                 "Regjistrimi dështoi: ${task.exception?.message}",
@@ -111,8 +112,9 @@ class MainActivity : Activity() {
                 auth.signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener(this) { task ->
                         if (task.isSuccessful) {
-                            showHome()
-                        } else {
+    saveUserProfile()
+    showHome()
+} else {
                             Toast.makeText(
                                 this,
                                 "Hyrja dështoi: ${task.exception?.message}",
@@ -223,14 +225,12 @@ class MainActivity : Activity() {
         layout.addView(logoutButton)
 
         setContentView(layout)
-    }
-}
+ }
 private fun saveUserProfile() {
     val user = auth.currentUser ?: return
 
     val userData = hashMapOf(
         "uid" to user.uid,
-        "email" to user.email,
         "username" to (user.email?.substringBefore("@") ?: "user"),
         "createdAt" to System.currentTimeMillis()
     )
@@ -238,4 +238,4 @@ private fun saveUserProfile() {
     db.collection("users")
         .document(user.uid)
         .set(userData)
-}
+}}
