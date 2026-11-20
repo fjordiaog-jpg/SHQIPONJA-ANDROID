@@ -209,11 +209,12 @@ class MainActivity : Activity() {
         }
     }
 
+    // KTHEN BUTONIN E ZEGO-S ME TIPIN E SAKTE
     private fun createCallButton(
         otherUserId: String,
         otherUsername: String,
         video: Boolean
-    ): View {
+    ): ZegoSendCallInvitationButton {
 
         val button = ZegoSendCallInvitationButton(this)
 
