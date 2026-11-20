@@ -59,7 +59,6 @@ class MainActivity : Activity() {
                     android.util.Log.getStackTraceString(throwable)
                 )
             } catch (_: Throwable) {
-                // Mos lejo qe regjistrimi i gabimit te shkaktoje gabim tjeter.
             }
 
             if (previousHandler != null) {
@@ -71,7 +70,7 @@ class MainActivity : Activity() {
         }
     }
 
-    // SHFAQ GABIMIN E RUAJTUR KUR APLIKACIONI HAPET PERSERI
+    // SHFAQ GABIMIN E RUAJTUR
     private fun showSavedCrashIfAny() {
         try {
             val crashFile = java.io.File(filesDir, "last_crash.txt")
@@ -120,7 +119,6 @@ class MainActivity : Activity() {
                 .show()
 
         } catch (e: Throwable) {
-            // Mos pengo hapjen normale te aplikacionit.
         }
     }
 
@@ -261,61 +259,227 @@ class MainActivity : Activity() {
         return button
     }
 
+    // HYRJA E RE - PAMJE MODERNE SHQIPONJA
     private fun showLogin() {
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.gravity = Gravity.CENTER
-        layout.setPadding(35, 35, 35, 35)
-        layout.setBackgroundColor(black)
 
+        val density = resources.displayMetrics.density
+        fun dp(value: Int): Int = (value * density).toInt()
+
+        val root = LinearLayout(this)
+        root.orientation = LinearLayout.VERTICAL
+        root.gravity = Gravity.CENTER
+        root.setPadding(dp(22), dp(20), dp(22), dp(20))
+
+        val gradient = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(
+                Color.rgb(8, 8, 8),
+                Color.rgb(45, 5, 10),
+                Color.rgb(12, 12, 12)
+            )
+        )
+        root.background = gradient
+
+        val scroll = ScrollView(this)
+        scroll.isFillViewport = true
+
+        val content = LinearLayout(this)
+        content.orientation = LinearLayout.VERTICAL
+        content.gravity = Gravity.CENTER
+        content.setPadding(dp(5), dp(15), dp(5), dp(15))
+
+        // SHQIPONJA
+        val eagle = TextView(this)
+        eagle.text = "🦅"
+        eagle.textSize = 75f
+        eagle.gravity = Gravity.CENTER
+
+        content.addView(
+            eagle,
+            LinearLayout.LayoutParams(-1, -2)
+        )
+
+        // TITULLI
         val title = TextView(this)
-        title.text = "🦅 SHQIPONJA"
-        title.textSize = 32f
-        title.setTextColor(red)
+        title.text = "CHAT SHQIPONJA"
+        title.textSize = 29f
+        title.setTextColor(Color.rgb(235, 185, 65))
+        title.typeface = Typeface.create(
+            "sans-serif-black",
+            Typeface.BOLD
+        )
         title.gravity = Gravity.CENTER
+        title.letterSpacing = 0.08f
+
+        content.addView(
+            title,
+            LinearLayout.LayoutParams(-1, -2)
+        )
 
         val subtitle = TextView(this)
-        subtitle.text = "Komuniko me të gjithë!"
-        subtitle.textSize = 17f
-        subtitle.setTextColor(white)
+        subtitle.text = "LIDHJE  •  KOMUNIKIM  •  BESIM"
+        subtitle.textSize = 12f
+        subtitle.setTextColor(Color.LTGRAY)
         subtitle.gravity = Gravity.CENTER
-        subtitle.setPadding(10, 15, 10, 25)
+        subtitle.letterSpacing = 0.12f
+        subtitle.setPadding(0, dp(10), 0, dp(25))
 
-        val emailInput = EditText(this)
-        emailInput.hint = "Adresa e emailit"
-        emailInput.setTextColor(white)
-        emailInput.setHintTextColor(Color.LTGRAY)
-        emailInput.inputType =
+        content.addView(subtitle)
+
+        // KARTA E HYRJES
+        val card = LinearLayout(this)
+        card.orientation = LinearLayout.VERTICAL
+        card.setPadding(dp(22), dp(25), dp(22), dp(22))
+
+        val cardBackground = GradientDrawable()
+        cardBackground.setColor(Color.rgb(29, 29, 29))
+        cardBackground.cornerRadius = dp(22).toFloat()
+        cardBackground.setStroke(
+            dp(1),
+            Color.rgb(125, 95, 45)
+        )
+        card.background = cardBackground
+        card.elevation = dp(8).toFloat()
+
+        val welcome = TextView(this)
+        welcome.text = "MIRË SE ERDHE!"
+        welcome.textSize = 21f
+        welcome.setTextColor(Color.rgb(235, 185, 65))
+        welcome.typeface = Typeface.DEFAULT_BOLD
+        welcome.gravity = Gravity.CENTER
+
+        card.addView(welcome)
+
+        val description = TextView(this)
+        description.text = "Hyr në llogarinë tënde dhe lidhu me të gjithë."
+        description.textSize = 14f
+        description.setTextColor(Color.LTGRAY)
+        description.gravity = Gravity.CENTER
+        description.setPadding(0, dp(8), 0, dp(22))
+
+        card.addView(description)
+
+        // FUSHA E EMAILIT
+        fun makeInput(
+            hintText: String,
+            type: Int
+        ): EditText {
+
+            val input = EditText(this)
+            input.hint = hintText
+            input.textSize = 15f
+            input.setTextColor(Color.WHITE)
+            input.setHintTextColor(Color.LTGRAY)
+            input.inputType = type
+            input.setSingleLine(true)
+            input.setPadding(dp(16), 0, dp(16), 0)
+
+            val inputBackground = GradientDrawable()
+            inputBackground.setColor(Color.rgb(45, 45, 45))
+            inputBackground.cornerRadius = dp(13).toFloat()
+            inputBackground.setStroke(
+                dp(1),
+                Color.rgb(90, 75, 55)
+            )
+            input.background = inputBackground
+
+            val params = LinearLayout.LayoutParams(
+                -1,
+                dp(55)
+            )
+            params.setMargins(0, dp(7), 0, dp(12))
+
+            card.addView(input, params)
+
+            return input
+        }
+
+        val emailInput = makeInput(
+            "✉  Adresa e emailit",
             InputType.TYPE_CLASS_TEXT or
-            InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+        )
 
-        val passwordInput = EditText(this)
-        passwordInput.hint = "Fjalëkalimi"
-        passwordInput.setTextColor(white)
-        passwordInput.setHintTextColor(Color.LTGRAY)
-        passwordInput.inputType =
+        val passwordInput = makeInput(
+            "🔒  Fjalëkalimi",
             InputType.TYPE_CLASS_TEXT or
-            InputType.TYPE_TEXT_VARIATION_PASSWORD
+                InputType.TYPE_TEXT_VARIATION_PASSWORD
+        )
 
-        val registerButton = Button(this)
-        registerButton.text = "REGJISTROHU"
+        // BUTONAT
+        fun makeButton(
+            text: String,
+            color: Int,
+            textColor: Int
+        ): Button {
 
-        val loginButton = Button(this)
-        loginButton.text = "HYR NË LLOGARI"
+            val button = Button(this)
+            button.text = text
+            button.textSize = 14f
+            button.setTextColor(textColor)
+            button.typeface = Typeface.DEFAULT_BOLD
+            button.isAllCaps = false
 
-        val guestButton = Button(this)
-        guestButton.text = "HYR SI VIZITOR"
+            val buttonBackground = GradientDrawable()
+            buttonBackground.setColor(color)
+            buttonBackground.cornerRadius = dp(14).toFloat()
+            button.background = buttonBackground
 
-        layout.addView(title)
-        layout.addView(subtitle)
-        layout.addView(emailInput)
-        layout.addView(passwordInput)
-        layout.addView(registerButton)
-        layout.addView(loginButton)
-        layout.addView(guestButton)
+            button.elevation = dp(3).toFloat()
 
-        setContentView(layout)
+            val params = LinearLayout.LayoutParams(
+                -1,
+                dp(53)
+            )
+            params.setMargins(0, dp(7), 0, dp(7))
 
+            card.addView(button, params)
+
+            return button
+        }
+
+        val loginButton = makeButton(
+            "HYR NË LLOGARI",
+            Color.rgb(190, 20, 35),
+            Color.WHITE
+        )
+
+        val registerButton = makeButton(
+            "KRIJO LLOGARI TË RE",
+            Color.rgb(205, 165, 65),
+            Color.BLACK
+        )
+
+        val guestButton = makeButton(
+            "HYR SI VIZITOR",
+            Color.rgb(65, 65, 65),
+            Color.WHITE
+        )
+
+        content.addView(
+            card,
+            LinearLayout.LayoutParams(-1, -2)
+        )
+
+        val footer = TextView(this)
+        footer.text = "🦅  SHQIPONJA  •  KOMUNIKO PA KUFIJ"
+        footer.textSize = 11f
+        footer.setTextColor(Color.rgb(205, 165, 65))
+        footer.gravity = Gravity.CENTER
+        footer.setPadding(0, dp(25), 0, dp(10))
+        footer.letterSpacing = 0.05f
+
+        content.addView(footer)
+
+        scroll.addView(content)
+        root.addView(
+            scroll,
+            LinearLayout.LayoutParams(-1, -1)
+        )
+
+        setContentView(root)
+
+        // REGJISTRIMI
         registerButton.setOnClickListener {
             val email = emailInput.text.toString().trim()
             val password = passwordInput.text.toString()
@@ -325,8 +489,12 @@ class MainActivity : Activity() {
                 return@setOnClickListener
             }
 
+            registerButton.isEnabled = false
+
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this) { task ->
+                    registerButton.isEnabled = true
+
                     if (task.isSuccessful) {
                         saveUserProfile()
                         showHome()
@@ -336,6 +504,7 @@ class MainActivity : Activity() {
                 }
         }
 
+        // HYRJA
         loginButton.setOnClickListener {
             val email = emailInput.text.toString().trim()
             val password = passwordInput.text.toString()
@@ -345,8 +514,12 @@ class MainActivity : Activity() {
                 return@setOnClickListener
             }
 
+            loginButton.isEnabled = false
+
             auth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this) { task ->
+                    loginButton.isEnabled = true
+
                     if (task.isSuccessful) {
                         saveUserProfile()
                         showHome()
@@ -356,6 +529,7 @@ class MainActivity : Activity() {
                 }
         }
 
+        // VIZITOR
         guestButton.setOnClickListener {
             showHome()
         }
