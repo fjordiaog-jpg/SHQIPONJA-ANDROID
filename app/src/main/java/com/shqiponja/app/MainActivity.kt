@@ -535,6 +535,7 @@ class MainActivity : Activity() {
         }
     }
 
+    // LISTA E BISEDAVE ME AVATARË RRETHORË
     private fun showHome() {
         messagesListener?.remove()
         messagesListener = null
@@ -544,6 +545,9 @@ class MainActivity : Activity() {
 
         val uid = auth.currentUser?.uid
 
+        val density = resources.displayMetrics.density
+        fun dp(value: Int): Int = (value * density).toInt()
+
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
         layout.setBackgroundColor(black)
@@ -551,6 +555,7 @@ class MainActivity : Activity() {
         val header = TextView(this)
         header.text = "🦅 SHQIPONJA"
         header.textSize = 27f
+        header.typeface = Typeface.DEFAULT_BOLD
         header.setTextColor(white)
         header.setBackgroundColor(red)
         header.gravity = Gravity.CENTER
@@ -584,9 +589,11 @@ class MainActivity : Activity() {
         subtitle.setPadding(18, 15, 10, 10)
 
         val scroll = ScrollView(this)
+
         val chatList = LinearLayout(this)
         chatList.orientation = LinearLayout.VERTICAL
-        chatList.setPadding(10, 5, 10, 10)
+        chatList.setPadding(dp(10), dp(5), dp(10), dp(10))
+
         scroll.addView(chatList)
 
         val logoutButton = Button(this)
@@ -656,6 +663,7 @@ class MainActivity : Activity() {
                 }
 
                 documents.forEach { document ->
+
                     val participants =
                         document.get("participants") as? List<*>
                             ?: emptyList<Any>()
@@ -690,30 +698,108 @@ class MainActivity : Activity() {
                                             ?.getString("text")
                                             ?: "Fillo bisedën"
 
+                                    // RRESHTI I KONTAKTIT
                                     val row = LinearLayout(this)
-                                    row.orientation = LinearLayout.VERTICAL
-                                    row.setPadding(16, 15, 16, 15)
+                                    row.orientation =
+                                        LinearLayout.HORIZONTAL
+                                    row.gravity = Gravity.CENTER_VERTICAL
+                                    row.setPadding(
+                                        dp(12),
+                                        dp(12),
+                                        dp(12),
+                                        dp(12)
+                                    )
                                     row.setBackgroundColor(
                                         Color.rgb(38, 38, 38)
                                     )
 
+                                    // AVATAR RRETHOR ME SHQIPONJË
+                                    val avatar = TextView(this)
+                                    avatar.text = "🦅"
+                                    avatar.textSize = 27f
+                                    avatar.gravity = Gravity.CENTER
+
+                                    val avatarBackground =
+                                        GradientDrawable()
+
+                                    avatarBackground.shape =
+                                        GradientDrawable.OVAL
+
+                                    avatarBackground.setColor(
+                                        Color.rgb(110, 15, 25)
+                                    )
+
+                                    avatarBackground.setStroke(
+                                        dp(2),
+                                        Color.rgb(220, 175, 65)
+                                    )
+
+                                    avatar.background = avatarBackground
+
+                                    val avatarParams =
+                                        LinearLayout.LayoutParams(
+                                            dp(56),
+                                            dp(56)
+                                        )
+
+                                    avatarParams.setMargins(
+                                        0,
+                                        0,
+                                        dp(14),
+                                        0
+                                    )
+
+                                    row.addView(
+                                        avatar,
+                                        avatarParams
+                                    )
+
+                                    // EMRI DHE MESAZHI I FUNDIT
+                                    val textLayout = LinearLayout(this)
+                                    textLayout.orientation =
+                                        LinearLayout.VERTICAL
+
                                     val name = TextView(this)
-                                    name.text = "🦅 @$username"
-                                    name.textSize = 19f
+                                    name.text = "@$username"
+                                    name.textSize = 18f
+                                    name.typeface =
+                                        Typeface.DEFAULT_BOLD
                                     name.setTextColor(white)
+                                    name.maxLines = 1
 
                                     val preview = TextView(this)
                                     preview.text = lastMessage
-                                    preview.textSize = 15f
+                                    preview.textSize = 14f
                                     preview.setTextColor(Color.LTGRAY)
-                                    preview.setPadding(0, 7, 0, 0)
+                                    preview.maxLines = 1
+                                    preview.ellipsize =
+                                        android.text.TextUtils.TruncateAt.END
+                                    preview.setPadding(0, dp(5), 0, 0)
 
-                                    row.addView(name)
-                                    row.addView(preview)
+                                    textLayout.addView(name)
+                                    textLayout.addView(preview)
+
+                                    row.addView(
+                                        textLayout,
+                                        LinearLayout.LayoutParams(
+                                            0,
+                                            -2,
+                                            1f
+                                        )
+                                    )
 
                                     val params =
-                                        LinearLayout.LayoutParams(-1, -2)
-                                    params.setMargins(3, 5, 3, 5)
+                                        LinearLayout.LayoutParams(
+                                            -1,
+                                            -2
+                                        )
+
+                                    params.setMargins(
+                                        dp(3),
+                                        dp(5),
+                                        dp(3),
+                                        dp(5)
+                                    )
 
                                     row.setOnClickListener {
                                         showChat(
