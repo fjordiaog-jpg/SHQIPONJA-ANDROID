@@ -1,27 +1,18 @@
+
 package com.shqiponja.app
 
 import android.app.Activity
 import android.os.Bundle
 import android.graphics.Color
 import android.view.Gravity
-import android.view.View
 import android.widget.*
 import android.text.InputType
 import android.app.AlertDialog
-import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.PhoneAuthOptions
-import com.google.firebase.auth.PhoneAuthProvider
-import com.google.firebase.auth.PhoneAuthCredential
-import java.util.concurrent.TimeUnit
 
 class MainActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
-    private var verificationId: String? = null
-    private lateinit var codeInput: EditText
-    private lateinit var verifyButton: Button
-
     private val green = Color.rgb(20, 130, 70)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,134 +41,88 @@ class MainActivity : Activity() {
         title.gravity = Gravity.CENTER
 
         val subtitle = TextView(this)
-        subtitle.text = "Regjistrohu me numrin tënd"
-        subtitle.textSize = 20f
+        subtitle.text = "Regjistrohu ose hyr në llogarinë tënde"
+        subtitle.textSize = 18f
         subtitle.gravity = Gravity.CENTER
 
-        val phoneInput = EditText(this)
-        phoneInput.hint = "Numri yt, p.sh. +355691234567"
-        phoneInput.inputType = InputType.TYPE_CLASS_PHONE
+        val emailInput = EditText(this)
+        emailInput.hint = "Adresa e emailit"
+        emailInput.inputType =
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
 
-        val sendButton = Button(this)
-        sendButton.text = "DËRGO KODIN SMS"
+        val passwordInput = EditText(this)
+        passwordInput.hint = "Fjalëkalimi"
+        passwordInput.inputType =
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+
+        val registerButton = Button(this)
+        registerButton.text = "REGJISTROHU"
+
+        val loginButton = Button(this)
+        loginButton.text = "HYR NË LLOGARI"
+
         val guestButton = Button(this)
-guestButton.text = "HYR SI VIZITOR 🦅"
-
-guestButton.setOnClickListener {
-    showHome()
-}
-
-        codeInput = EditText(this)
-        codeInput.hint = "Shkruaj kodin SMS"
-        codeInput.inputType = InputType.TYPE_CLASS_NUMBER
-        codeInput.visibility = View.GONE
-
-        verifyButton = Button(this)
-        verifyButton.text = "VERIFIKO KODIN"
-        verifyButton.visibility = View.GONE
+        guestButton.text = "HYR SI VIZITOR 🦅"
 
         layout.addView(title)
         layout.addView(subtitle)
-        layout.addView(phoneInput)
-        layout.addView(sendButton)
+        layout.addView(emailInput)
+        layout.addView(passwordInput)
+        layout.addView(registerButton)
+        layout.addView(loginButton)
         layout.addView(guestButton)
-        layout.addView(codeInput)
-        layout.addView(verifyButton)
 
         setContentView(layout)
 
-        val callbacks =
-            object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+        registerButton.setOnClickListener {
+            val email = emailInput.text.toString().trim()
+            val password = passwordInput.text.toString()
 
-                override fun onVerificationCompleted(
-                    credential: PhoneAuthCredential
-                ) {
-                    signIn(credential)
-                }
-
-                override fun onVerificationFailed(e: FirebaseException) {
-                    val kodi =
-                        if (e is com.google.firebase.auth.FirebaseAuthException) {
-                            e.errorCode
+            if (email.isEmpty() || password.isEmpty()) {
+                Toast.makeText(this, "Plotëso emailin dhe fjalëkalimin", Toast.LENGTH_LONG).show()
+            } else if (password.length < 6) {
+                Toast.makeText(this, "Fjalëkalimi duhet të ketë të paktën 6 karaktere", Toast.LENGTH_LONG).show()
+            } else {
+                auth.createUserWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(this) { task ->
+                        if (task.isSuccessful) {
+                            showHome()
                         } else {
-                            e.javaClass.simpleName
+                            Toast.makeText(
+                                this,
+                                "Regjistrimi dështoi: ${task.exception?.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
-
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle("Gabim: $kodi")
-                        .setMessage(e.message)
-                        .setPositiveButton("OK", null)
-                        .show()
-                }
-
-                override fun onCodeSent(
-                    id: String,
-                    token: PhoneAuthProvider.ForceResendingToken
-                ) {
-                    verificationId = id
-                    codeInput.visibility = View.VISIBLE
-                    verifyButton.visibility = View.VISIBLE
-
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Kodi SMS u dërgua!",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-
-        sendButton.setOnClickListener {
-            val number = phoneInput.text.toString().trim()
-
-            if (!number.startsWith("+") || number.length < 10) {
-                Toast.makeText(
-                    this,
-                    "Shkruaj numrin me prefiks +355",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
-                val options = PhoneAuthOptions.newBuilder(auth)
-                    .setPhoneNumber(number)
-                    .setTimeout(60L, TimeUnit.SECONDS)
-                    .setActivity(this)
-                    .setCallbacks(callbacks)
-                    .build()
-
-                PhoneAuthProvider.verifyPhoneNumber(options)
+                    }
             }
         }
 
-        verifyButton.setOnClickListener {
-            val id = verificationId
-            val code = codeInput.text.toString().trim()
+        loginButton.setOnClickListener {
+            val email = emailInput.text.toString().trim()
+            val password = passwordInput.text.toString()
 
-            if (id != null && code.length == 6) {
-                val credential =
-                    PhoneAuthProvider.getCredential(id, code)
-                signIn(credential)
+            if (email.isEmpty() || password.isEmpty()) {
+                Toast.makeText(this, "Plotëso emailin dhe fjalëkalimin", Toast.LENGTH_LONG).show()
             } else {
-                Toast.makeText(
-                    this,
-                    "Shkruaj kodin 6-shifror",
-                    Toast.LENGTH_SHORT
-                ).show()
+                auth.signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(this) { task ->
+                        if (task.isSuccessful) {
+                            showHome()
+                        } else {
+                            Toast.makeText(
+                                this,
+                                "Hyrja dështoi: ${task.exception?.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
             }
         }
-    }
 
-    private fun signIn(credential: PhoneAuthCredential) {
-        auth.signInWithCredential(credential)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    showHome()
-                } else {
-                    Toast.makeText(
-                        this,
-                        "Regjistrimi dështoi: ${task.exception?.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
+        guestButton.setOnClickListener {
+            showHome()
+        }
     }
 
     private fun showHome() {
@@ -206,12 +151,20 @@ guestButton.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle("Profili im 🦅")
                 .setMessage(
-                    "CHAT SHQIPONJA\n\nNumri: ${
-                        auth.currentUser?.phoneNumber ?: "Pa numër"
+                    "CHAT SHQIPONJA\n\nEmail: ${
+                        auth.currentUser?.email ?: "Vizitor"
                     }"
                 )
                 .setPositiveButton("MBYLL", null)
                 .show()
+        }
+
+        val logoutButton = Button(this)
+        logoutButton.text = "DIL NGA LLOGARIA"
+
+        logoutButton.setOnClickListener {
+            auth.signOut()
+            showLogin()
         }
 
         val newChatButton = Button(this)
@@ -226,6 +179,7 @@ guestButton.setOnClickListener {
         emptyText.textSize = 17f
         emptyText.gravity = Gravity.CENTER
         emptyText.setPadding(10, 50, 10, 50)
+
         chatList.addView(emptyText)
 
         newChatButton.setOnClickListener {
@@ -250,13 +204,8 @@ guestButton.setOnClickListener {
                         contact.textSize = 18f
                         contact.setTextColor(Color.BLACK)
                         contact.setPadding(15, 20, 15, 20)
-                        chatList.addView(contact)
 
-                        Toast.makeText(
-                            this,
-                            "Kontakti u shtua në listën lokale",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        chatList.addView(contact)
                     }
                 }
                 .setNegativeButton("ANULO", null)
@@ -268,6 +217,7 @@ guestButton.setOnClickListener {
         layout.addView(profileButton)
         layout.addView(newChatButton)
         layout.addView(chatList)
+        layout.addView(logoutButton)
 
         setContentView(layout)
     }
