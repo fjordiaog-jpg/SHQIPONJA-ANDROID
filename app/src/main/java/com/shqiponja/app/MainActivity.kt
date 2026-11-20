@@ -614,19 +614,17 @@ class MainActivity : Activity() {
             .show()
     }
 
-    // FAQJA E BISEDAVE ME BUTONIN E RI PLUS
+    // FAQJA E BISEDAVE ME BUTONIN PLUS POSHTE DJATHTAS
     private fun showChatsPage(content: FrameLayout, uid: String?) {
         val density = resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
 
-        val page = LinearLayout(this)
-        page.orientation = LinearLayout.VERTICAL
+        val page = FrameLayout(this)
         page.setBackgroundColor(black)
 
-        val actions = LinearLayout(this)
-        actions.orientation = LinearLayout.HORIZONTAL
-        actions.gravity = Gravity.CENTER_VERTICAL
-        actions.setPadding(dp(14), dp(8), dp(14), dp(8))
+        val mainLayout = LinearLayout(this)
+        mainLayout.orientation = LinearLayout.VERTICAL
+        mainLayout.setBackgroundColor(black)
 
         val subtitle = TextView(this)
         subtitle.text = "BISEDAT E MIA"
@@ -634,44 +632,65 @@ class MainActivity : Activity() {
         subtitle.typeface = Typeface.DEFAULT_BOLD
         subtitle.setTextColor(white)
         subtitle.gravity = Gravity.CENTER_VERTICAL
+        subtitle.setPadding(dp(16), dp(12), dp(10), dp(12))
 
-        actions.addView(
+        mainLayout.addView(
             subtitle,
-            LinearLayout.LayoutParams(0, dp(48), 1f)
+            LinearLayout.LayoutParams(-1, dp(48))
         )
 
-        // BUTON RRETHOR JESHiL, PLUS I ZI
+        val scroll = ScrollView(this)
+        val chatList = LinearLayout(this)
+        chatList.orientation = LinearLayout.VERTICAL
+        chatList.setPadding(dp(10), dp(5), dp(10), dp(80))
+        scroll.addView(chatList)
+
+        mainLayout.addView(
+            scroll,
+            LinearLayout.LayoutParams(-1, 0, 1f)
+        )
+
+        page.addView(
+            mainLayout,
+            FrameLayout.LayoutParams(-1, -1)
+        )
+
+        // BUTONI PLUS JESHiL POSHTE DJATHTAS
         val plusButton = TextView(this)
         plusButton.text = "+"
-        plusButton.textSize = 29f
+        plusButton.textSize = 31f
         plusButton.typeface = Typeface.DEFAULT_BOLD
         plusButton.setTextColor(Color.BLACK)
         plusButton.gravity = Gravity.CENTER
+        plusButton.includeFontPadding = false
 
         val plusBackground = GradientDrawable()
         plusBackground.shape = GradientDrawable.OVAL
         plusBackground.setColor(Color.rgb(32, 184, 90))
         plusButton.background = plusBackground
-        plusButton.elevation = dp(4).toFloat()
+        plusButton.elevation = dp(8).toFloat()
+
         plusButton.setOnClickListener {
             askUsername()
         }
 
-        val plusParams = LinearLayout.LayoutParams(dp(42), dp(42))
-        actions.addView(plusButton, plusParams)
+        val plusParams = FrameLayout.LayoutParams(
+            dp(52),
+            dp(52),
+            Gravity.BOTTOM or Gravity.END
+        )
+        plusParams.setMargins(0, 0, dp(18), dp(20))
+        page.addView(plusButton, plusParams)
 
-        val scroll = ScrollView(this)
-        val chatList = LinearLayout(this)
-        chatList.orientation = LinearLayout.VERTICAL
-        chatList.setPadding(dp(10), dp(5), dp(10), dp(10))
-        scroll.addView(chatList)
-
-        page.addView(actions)
-        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        content.addView(page, FrameLayout.LayoutParams(-1, -1))
+        content.addView(
+            page,
+            FrameLayout.LayoutParams(-1, -1)
+        )
 
         if (uid == null) {
-            chatList.addView(makeLabel("Hyr në llogari për të përdorur bisedat."))
+            chatList.addView(
+                makeLabel("Hyr në llogari për të përdorur bisedat.")
+            )
             return
         }
 
