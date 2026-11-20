@@ -1,3 +1,4 @@
+
 name: Build SHQIPONJA APK
 
 on:
@@ -39,6 +40,9 @@ jobs:
         run: gradle :app:signingReport
 
       - name: Build APK
+        env:
+          ZEGO_APP_SIGN: ${{ secrets.ZEGO_APP_SIGN }}
+          ZEGO_APP_ID: "803021414"
         run: gradle assembleDebug --stacktrace
 
       - name: Upload APK
