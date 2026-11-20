@@ -498,11 +498,11 @@ class MainActivity : Activity() {
         layout.orientation = LinearLayout.VERTICAL
         layout.setBackgroundColor(black)
 
-        // KRYESEKRENI - TITULLI LART MAJTAS
+        // KREU I APLIKACIONIT
         val header = LinearLayout(this)
         header.orientation = LinearLayout.HORIZONTAL
         header.gravity = Gravity.CENTER_VERTICAL
-        header.setPadding(dp(16), dp(12), dp(12), dp(12))
+        header.setPadding(dp(16), dp(8), dp(12), dp(8))
         header.setBackgroundColor(red)
 
         val title = TextView(this)
@@ -517,17 +517,22 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(0, -2, 1f)
         )
 
-        val profileButton = TextView(this)
-        profileButton.text = "👤"
-        profileButton.textSize = 25f
-        profileButton.gravity = Gravity.CENTER
-        profileButton.setPadding(dp(10), dp(5), dp(10), dp(5))
+        // BUTONI ME TRE PIKA
+        val settingsButton = TextView(this)
+        settingsButton.text = "⋮"
+        settingsButton.textSize = 34f
+        settingsButton.typeface = Typeface.DEFAULT_BOLD
+        settingsButton.setTextColor(white)
+        settingsButton.gravity = Gravity.CENTER
+        settingsButton.setPadding(dp(14), 0, dp(8), 0)
+        settingsButton.minimumWidth = dp(45)
+        settingsButton.minimumHeight = dp(45)
 
-        profileButton.setOnClickListener {
-            showProfileDialog()
+        settingsButton.setOnClickListener {
+            showMainMenu(settingsButton)
         }
 
-        header.addView(profileButton)
+        header.addView(settingsButton)
 
         // HAPESIRA E KATEGORISE
         val content = FrameLayout(this)
@@ -616,6 +621,81 @@ class MainActivity : Activity() {
         }
 
         showChatsPage(content, uid)
+    }
+
+    // MENUJA ME TRE PIKA
+    private fun showMainMenu(anchor: View) {
+        val popup = PopupMenu(this, anchor)
+
+        popup.menu.add("Cilësimet")
+        popup.menu.add("Profili im")
+        popup.menu.add("Privatësia")
+        popup.menu.add("Dil nga llogaria")
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.title.toString()) {
+                "Cilësimet" -> {
+                    showSettingsDialog()
+                    true
+                }
+
+                "Profili im" -> {
+                    showProfileDialog()
+                    true
+                }
+
+                "Privatësia" -> {
+                    showPrivacyDialog()
+                    true
+                }
+
+                "Dil nga llogaria" -> {
+                    confirmLogout()
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        popup.show()
+    }
+
+    // FAQJA E CILETIMEVE
+    private fun showSettingsDialog() {
+        val email = auth.currentUser?.email ?: "Vizitor"
+
+        val message =
+            "🦅 CHAT SHQIPONJA\n\n" +
+            "Llogaria: $email\n\n" +
+            "Versioni: 1.0\n\n" +
+            "Cilësimet e tjera të aplikacionit " +
+            "do të shtohen në këtë seksion."
+
+        AlertDialog.Builder(this)
+            .setTitle("⚙️ Cilësimet")
+            .setMessage(message)
+            .setPositiveButton("MBYLL", null)
+            .setNeutralButton("PROFILI IM") { _, _ ->
+                showProfileDialog()
+            }
+            .show()
+    }
+
+    // PRIVATESIA
+    private fun showPrivacyDialog() {
+        val message =
+            "PRIVATËSIA E LLOGARISË\n\n" +
+            "Bisedat dhe të dhënat e përdoruesit " +
+            "ruhen përmes Firebase.\n\n" +
+            "Mos i ndani fjalëkalimet ose të dhënat " +
+            "tuaja personale me persona të tjerë."
+
+        AlertDialog.Builder(this)
+            .setTitle("🔒 Privatësia")
+            .setMessage(message)
+            .setPositiveButton("E KUPTOVA", null)
+            .show()
     }
 
     // KATEGORIA CHATS
@@ -917,8 +997,19 @@ class MainActivity : Activity() {
             .setMessage("CHAT SHQIPONJA\n\nEmail: $email")
             .setPositiveButton("MBYLL", null)
             .setNeutralButton("DIL NGA LLOGARIA") { _, _ ->
+                confirmLogout()
+            }
+            .show()
+    }
+
+    private fun confirmLogout() {
+        AlertDialog.Builder(this)
+            .setTitle("Dil nga llogaria")
+            .setMessage("A dëshiron të dalësh nga llogaria?")
+            .setPositiveButton("PO, DIL") { _, _ ->
                 logout()
             }
+            .setNegativeButton("ANULO", null)
             .show()
     }
 
