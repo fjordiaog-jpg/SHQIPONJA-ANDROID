@@ -15,6 +15,22 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField(
+            "String",
+            "ZEGO_APP_ID",
+            "\"${System.getenv("ZEGO_APP_ID") ?: "803021414"}\""
+        )
+
+        buildConfigField(
+            "String",
+            "ZEGO_APP_SIGN",
+            "\"${System.getenv("ZEGO_APP_SIGN") ?: ""}\""
+        )
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {
@@ -34,6 +50,5 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
 
-    // ZEGO Audio and Video Calls
     implementation("im.zego:zego_uikit_prebuilt_call_android:+")
 }
