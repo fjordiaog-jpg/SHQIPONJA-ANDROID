@@ -8,6 +8,7 @@ import android.os.Build
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -129,6 +130,21 @@ class MainActivity : Activity() {
                 )
             )
         )
+
+        button.text = if (video) "🎥 VIDEO" else "📞 TELEFONATË"
+        button.textSize = 16f
+        button.setTextColor(Color.WHITE)
+        button.gravity = Gravity.CENTER
+        button.setPadding(12, 12, 12, 12)
+
+        val shape = GradientDrawable()
+        shape.setColor(
+            if (video) Color.rgb(35, 100, 190)
+            else Color.rgb(20, 145, 75)
+        )
+        shape.cornerRadius = 18f
+
+        button.background = shape
 
         return button
     }
@@ -613,14 +629,20 @@ class MainActivity : Activity() {
             true
         )
 
+        val callParams = LinearLayout.LayoutParams(0, 65, 1f)
+        callParams.setMargins(5, 0, 5, 0)
+
         callLayout.addView(
             voiceCall,
-            LinearLayout.LayoutParams(0, 65, 1f)
+            callParams
         )
+
+        val videoParams = LinearLayout.LayoutParams(0, 65, 1f)
+        videoParams.setMargins(5, 0, 5, 0)
 
         callLayout.addView(
             videoCall,
-            LinearLayout.LayoutParams(0, 65, 1f)
+            videoParams
         )
 
         val scrollView = ScrollView(this)
