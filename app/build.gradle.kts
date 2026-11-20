@@ -34,6 +34,6 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
 
-    // ZEGO Audio and Video Call
-    implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:1.0.2")
+    // ZEGO Audio and Video Calls
+    implementation("im.zego:zego_uikit_prebuilt_call_android:+")
 }
