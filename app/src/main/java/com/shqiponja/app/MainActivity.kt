@@ -1343,9 +1343,10 @@ class MainActivity : Activity() {
             dp(16)
         )
 
+        // KORRIGJIMI I GABIMIT LayoutParams
         scrollView.addView(
             messageList,
-            ScrollView.LayoutParams(-1, -2)
+            FrameLayout.LayoutParams(-1, -2)
         )
 
         conversation.addView(
