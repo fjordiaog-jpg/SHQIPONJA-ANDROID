@@ -10,9 +10,14 @@ import android.content.pm.PackageManager
 import android.content.ClipboardManager
 import android.content.ClipData
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.media.MediaPlayer
+import android.media.MediaRecorder
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -21,15 +26,19 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.google.firebase.storage.FirebaseStorage
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
 import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
 import com.zegocloud.uikit.prebuilt.call.invite.widget.ZegoSendCallInvitationButton
 import com.zegocloud.uikit.service.defines.ZegoUIKitUser
+import java.io.File
+import java.util.UUID
 
 class MainActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
+    private val storage by lazy { FirebaseStorage.getInstance() }
 
     private val red = Color.rgb(190, 20, 35)
     private val black = Color.rgb(20, 20, 20)
@@ -44,15 +53,28 @@ class MainActivity : Activity() {
 
     private var zegoInitialized = false
     private var zegoInitializing = false
-
     private var selectedHomeTab = "chats"
+
+    // VOICE
+    private var mediaRecorder: MediaRecorder? = null
+    private var recordingFile: File? = null
+    private var recordingChatId: String? = null
+    private var pendingVoiceChatId: String? = null
+    private var activeVoiceButton: TextView? = null
+    private var isRecording = false
+
+    // AUDIO PLAYER
+    private var mediaPlayer: MediaPlayer? = null
+
+    // FOTO / VIDEO
+    private var pendingUploadChatId: String? = null
 
     private fun installCrashLogger() {
         val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
 
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
-                val crashFile = java.io.File(filesDir, "last_crash.txt")
+                val crashFile = File(filesDir, "last_crash.txt")
                 crashFile.writeText(
                     "CHAT SHQIPONJA - GABIM I REGJISTRUAR\n" +
                     "Koha: ${java.util.Date()}\n" +
@@ -73,7 +95,7 @@ class MainActivity : Activity() {
 
     private fun showSavedCrashIfAny() {
         try {
-            val crashFile = java.io.File(filesDir, "last_crash.txt")
+            val crashFile = File(filesDir, "last_crash.txt")
             if (!crashFile.exists()) return
 
             val crashText = crashFile.readText()
@@ -90,37 +112,29 @@ class MainActivity : Activity() {
 
             AlertDialog.Builder(this)
                 .setTitle("U regjistrua një gabim")
-                .setMessage(
-                    "Aplikacioni u mbyll nga një gabim. " +
-                    "Shtyp KOPJO dhe ma dërgo tekstin."
-                )
+                .setMessage("Aplikacioni u mbyll nga një gabim. Shtyp KOPJO dhe ma dërgo tekstin.")
                 .setView(scrollView)
                 .setPositiveButton("KOPJO") { _, _ ->
                     try {
                         val clipboard =
-                            getSystemService(Context.CLIPBOARD_SERVICE)
-                                as ClipboardManager
+                            getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
                         clipboard.setPrimaryClip(
-                            ClipData.newPlainText(
-                                "CHAT SHQIPONJA CRASH",
-                                crashText
-                            )
+                            ClipData.newPlainText("CHAT SHQIPONJA CRASH", crashText)
                         )
                         toast("Gabimi u kopjua. Ma dërgo tekstin.")
-                    } catch (e: Throwable) {
+                    } catch (_: Throwable) {
                         toast("Nuk u kopjua gabimi.")
                     }
                 }
                 .setNegativeButton("MBYLL", null)
                 .show()
-        } catch (e: Throwable) {
+        } catch (_: Throwable) {
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         installCrashLogger()
 
         try {
@@ -157,7 +171,6 @@ class MainActivity : Activity() {
 
     private fun initializeZego() {
         val user = auth.currentUser ?: return
-
         if (zegoInitialized || zegoInitializing) return
 
         val appId = BuildConfig.ZEGO_APP_ID.toLongOrNull()
@@ -216,7 +229,6 @@ class MainActivity : Activity() {
     ): ZegoSendCallInvitationButton {
 
         val button = ZegoSendCallInvitationButton(this)
-
         button.setIsVideoCall(video)
         button.setResourceID(zegoResourceId)
 
@@ -229,12 +241,7 @@ class MainActivity : Activity() {
             )
         )
 
-        button.text = if (video) {
-            "📹  VIDEO"
-        } else {
-            "📞  TELEFONO"
-        }
-
+        button.text = if (video) "📹 VIDEO" else "📞 TELEFONO"
         button.textSize = 15f
         button.setTextColor(Color.WHITE)
         button.typeface = Typeface.DEFAULT_BOLD
@@ -289,10 +296,7 @@ class MainActivity : Activity() {
         title.text = "CHAT SHQIPONJA"
         title.textSize = 29f
         title.setTextColor(Color.rgb(235, 185, 65))
-        title.typeface = Typeface.create(
-            "sans-serif-black",
-            Typeface.BOLD
-        )
+        title.typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
         title.gravity = Gravity.CENTER
         title.letterSpacing = 0.08f
         content.addView(title)
@@ -352,27 +356,20 @@ class MainActivity : Activity() {
             val params = LinearLayout.LayoutParams(-1, dp(55))
             params.setMargins(0, dp(7), 0, dp(12))
             card.addView(input, params)
-
             return input
         }
 
         val emailInput = makeInput(
             "✉  Adresa e emailit",
-            InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
         )
 
         val passwordInput = makeInput(
             "🔒  Fjalëkalimi",
-            InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_VARIATION_PASSWORD
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         )
 
-        fun makeButton(
-            text: String,
-            color: Int,
-            textColor: Int
-        ): Button {
+        fun makeButton(text: String, color: Int, textColor: Int): Button {
             val button = Button(this)
             button.text = text
             button.textSize = 14f
@@ -389,27 +386,12 @@ class MainActivity : Activity() {
             val params = LinearLayout.LayoutParams(-1, dp(53))
             params.setMargins(0, dp(7), 0, dp(7))
             card.addView(button, params)
-
             return button
         }
 
-        val loginButton = makeButton(
-            "HYR NË LLOGARI",
-            Color.rgb(190, 20, 35),
-            Color.WHITE
-        )
-
-        val registerButton = makeButton(
-            "KRIJO LLOGARI TË RE",
-            Color.rgb(205, 165, 65),
-            Color.BLACK
-        )
-
-        val guestButton = makeButton(
-            "HYR SI VIZITOR",
-            Color.rgb(65, 65, 65),
-            Color.WHITE
-        )
+        val loginButton = makeButton("HYR NË LLOGARI", Color.rgb(190, 20, 35), Color.WHITE)
+        val registerButton = makeButton("KRIJO LLOGARI TË RE", Color.rgb(205, 165, 65), Color.BLACK)
+        val guestButton = makeButton("HYR SI VIZITOR", Color.rgb(65, 65, 65), Color.WHITE)
 
         content.addView(card, LinearLayout.LayoutParams(-1, -2))
 
@@ -436,11 +418,9 @@ class MainActivity : Activity() {
             }
 
             registerButton.isEnabled = false
-
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this) { task ->
                     registerButton.isEnabled = true
-
                     if (task.isSuccessful) {
                         saveUserProfile()
                         showHome()
@@ -460,11 +440,9 @@ class MainActivity : Activity() {
             }
 
             loginButton.isEnabled = false
-
             auth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this) { task ->
                     loginButton.isEnabled = true
-
                     if (task.isSuccessful) {
                         saveUserProfile()
                         showHome()
@@ -484,12 +462,10 @@ class MainActivity : Activity() {
 
         messagesListener?.remove()
         messagesListener = null
-
         chatsListener?.remove()
         chatsListener = null
 
         val uid = auth.currentUser?.uid
-
         val density = resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
 
@@ -509,11 +485,7 @@ class MainActivity : Activity() {
         title.typeface = Typeface.DEFAULT_BOLD
         title.setTextColor(white)
         title.gravity = Gravity.CENTER_VERTICAL
-
-        header.addView(
-            title,
-            LinearLayout.LayoutParams(0, -2, 1f)
-        )
+        header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
 
         val settingsButton = TextView(this)
         settingsButton.text = "⋮"
@@ -524,15 +496,10 @@ class MainActivity : Activity() {
         settingsButton.setPadding(dp(14), 0, dp(8), 0)
         settingsButton.minimumWidth = dp(45)
         settingsButton.minimumHeight = dp(45)
-
-        settingsButton.setOnClickListener {
-            showMainMenu(settingsButton)
-        }
-
+        settingsButton.setOnClickListener { showMainMenu(settingsButton) }
         header.addView(settingsButton)
 
         val content = FrameLayout(this)
-        content.setBackgroundColor(black)
 
         val bottomNav = LinearLayout(this)
         bottomNav.orientation = LinearLayout.HORIZONTAL
@@ -540,13 +507,8 @@ class MainActivity : Activity() {
         bottomNav.setBackgroundColor(Color.rgb(30, 30, 30))
         bottomNav.setPadding(dp(5), dp(7), dp(5), dp(7))
 
-        fun makeTab(
-            icon: String,
-            label: String,
-            tabName: String
-        ): LinearLayout {
+        fun makeTab(icon: String, label: String, tabName: String): LinearLayout {
             val selected = selectedHomeTab == tabName
-
             val tab = LinearLayout(this)
             tab.orientation = LinearLayout.VERTICAL
             tab.gravity = Gravity.CENTER
@@ -555,8 +517,7 @@ class MainActivity : Activity() {
             val tabBackground = GradientDrawable()
             tabBackground.cornerRadius = dp(18).toFloat()
             tabBackground.setColor(
-                if (selected) Color.rgb(75, 25, 30)
-                else Color.TRANSPARENT
+                if (selected) Color.rgb(75, 25, 30) else Color.TRANSPARENT
             )
             tab.background = tabBackground
 
@@ -564,50 +525,29 @@ class MainActivity : Activity() {
             iconView.text = icon
             iconView.textSize = 21f
             iconView.gravity = Gravity.CENTER
-            iconView.setTextColor(
-                if (selected) gold else Color.LTGRAY
-            )
+            iconView.setTextColor(if (selected) gold else Color.LTGRAY)
 
             val labelView = TextView(this)
             labelView.text = label
             labelView.textSize = 13f
             labelView.typeface = Typeface.DEFAULT_BOLD
             labelView.gravity = Gravity.CENTER
-            labelView.setTextColor(
-                if (selected) gold else Color.LTGRAY
-            )
+            labelView.setTextColor(if (selected) gold else Color.LTGRAY)
 
             tab.addView(iconView)
             tab.addView(labelView)
-
             tab.setOnClickListener {
-                if (selectedHomeTab != tabName) {
-                    showHome(tabName)
-                }
+                if (selectedHomeTab != tabName) showHome(tabName)
             }
-
             return tab
         }
 
-        bottomNav.addView(
-            makeTab("💬", "Chats", "chats"),
-            LinearLayout.LayoutParams(0, -2, 1f)
-        )
-
-        bottomNav.addView(
-            makeTab("📞", "Calls", "calls"),
-            LinearLayout.LayoutParams(0, -2, 1f)
-        )
+        bottomNav.addView(makeTab("💬", "Chats", "chats"), LinearLayout.LayoutParams(0, -2, 1f))
+        bottomNav.addView(makeTab("📞", "Calls", "calls"), LinearLayout.LayoutParams(0, -2, 1f))
 
         layout.addView(header)
-
-        layout.addView(
-            content,
-            LinearLayout.LayoutParams(-1, 0, 1f)
-        )
-
+        layout.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
         layout.addView(bottomNav)
-
         setContentView(layout)
 
         if (selectedHomeTab == "calls") {
@@ -620,7 +560,6 @@ class MainActivity : Activity() {
 
     private fun showMainMenu(anchor: View) {
         val popup = PopupMenu(this, anchor)
-
         popup.menu.add("Cilësimet")
         popup.menu.add("Profili im")
         popup.menu.add("Privatësia")
@@ -632,56 +571,45 @@ class MainActivity : Activity() {
                     showSettingsDialog()
                     true
                 }
-
                 "Profili im" -> {
                     showProfileDialog()
                     true
                 }
-
                 "Privatësia" -> {
                     showPrivacyDialog()
                     true
                 }
-
                 "Dil nga llogaria" -> {
                     confirmLogout()
                     true
                 }
-
                 else -> false
             }
         }
-
         popup.show()
     }
 
     private fun showSettingsDialog() {
         val email = auth.currentUser?.email ?: "Vizitor"
-
         val message =
             "🦅 CHAT SHQIPONJA\n\n" +
             "Llogaria: $email\n\n" +
             "Versioni: 1.0\n\n" +
-            "Cilësimet e tjera të aplikacionit " +
-            "do të shtohen në këtë seksion."
+            "Cilësimet e tjera të aplikacionit do të shtohen në këtë seksion."
 
         AlertDialog.Builder(this)
             .setTitle("⚙️ Cilësimet")
             .setMessage(message)
             .setPositiveButton("MBYLL", null)
-            .setNeutralButton("PROFILI IM") { _, _ ->
-                showProfileDialog()
-            }
+            .setNeutralButton("PROFILI IM") { _, _ -> showProfileDialog() }
             .show()
     }
 
     private fun showPrivacyDialog() {
         val message =
             "PRIVATËSIA E LLOGARISË\n\n" +
-            "Bisedat dhe të dhënat e përdoruesit " +
-            "ruhen përmes Firebase.\n\n" +
-            "Mos i ndani fjalëkalimet ose të dhënat " +
-            "tuaja personale me persona të tjerë."
+            "Bisedat dhe të dhënat e përdoruesit ruhen përmes Firebase.\n\n" +
+            "Mos i ndani fjalëkalimet ose të dhënat tuaja personale me persona të tjerë."
 
         AlertDialog.Builder(this)
             .setTitle("🔒 Privatësia")
@@ -690,10 +618,7 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun showChatsPage(
-        content: FrameLayout,
-        uid: String?
-    ) {
+    private fun showChatsPage(content: FrameLayout, uid: String?) {
         val density = resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
 
@@ -716,15 +641,8 @@ class MainActivity : Activity() {
         searchButton.isAllCaps = false
         searchButton.setOnClickListener { askUsername() }
 
-        actions.addView(
-            newChatButton,
-            LinearLayout.LayoutParams(0, -2, 1f)
-        )
-
-        actions.addView(
-            searchButton,
-            LinearLayout.LayoutParams(0, -2, 1f)
-        )
+        actions.addView(newChatButton, LinearLayout.LayoutParams(0, -2, 1f))
+        actions.addView(searchButton, LinearLayout.LayoutParams(0, -2, 1f))
 
         val subtitle = TextView(this)
         subtitle.text = "BISEDAT E MIA"
@@ -734,29 +652,18 @@ class MainActivity : Activity() {
         subtitle.setPadding(dp(16), dp(12), dp(10), dp(8))
 
         val scroll = ScrollView(this)
-
         val chatList = LinearLayout(this)
         chatList.orientation = LinearLayout.VERTICAL
         chatList.setPadding(dp(10), dp(5), dp(10), dp(10))
-
         scroll.addView(chatList)
 
         page.addView(actions)
         page.addView(subtitle)
-        page.addView(
-            scroll,
-            LinearLayout.LayoutParams(-1, 0, 1f)
-        )
-
-        content.addView(
-            page,
-            FrameLayout.LayoutParams(-1, -1)
-        )
+        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        content.addView(page, FrameLayout.LayoutParams(-1, -1))
 
         if (uid == null) {
-            chatList.addView(
-                makeLabel("Hyr në llogari për të përdorur bisedat.")
-            )
+            chatList.addView(makeLabel("Hyr në llogari për të përdorur bisedat."))
             return
         }
 
@@ -772,106 +679,69 @@ class MainActivity : Activity() {
                 }
 
                 chatList.removeAllViews()
-
                 val documents = snapshots?.documents ?: emptyList()
 
                 if (documents.isEmpty()) {
                     chatList.addView(
-                        makeLabel(
-                            "Nuk ke ende biseda.\n\nShtyp BISEDË E RE për të filluar! 🦅"
-                        )
+                        makeLabel("Nuk ke ende biseda.\n\nShtyp BISEDË E RE për të filluar! 🦅")
                     )
                     return@addSnapshotListener
                 }
 
                 documents.forEach { document ->
-                    val participants =
-                        document.get("participants") as? List<*>
-                            ?: emptyList<Any>()
+                    val participants = document.get("participants") as? List<*>
+                        ?: emptyList<Any>()
 
                     val otherUid = participants
                         .filterIsInstance<String>()
-                        .firstOrNull { it != uid }
-                        ?: return@forEach
+                        .firstOrNull { it != uid } ?: return@forEach
 
-                    db.collection("users")
-                        .document(otherUid)
-                        .get()
+                    db.collection("users").document(otherUid).get()
                         .addOnSuccessListener { userDocument ->
 
-                            val username =
-                                userDocument.getString("username")
-                                    ?: "Përdorues"
+                            val username = userDocument.getString("username") ?: "Përdorues"
 
                             db.collection("chats")
                                 .document(document.id)
                                 .collection("messages")
-                                .orderBy(
-                                    "createdAt",
-                                    Query.Direction.DESCENDING
-                                )
+                                .orderBy("createdAt", Query.Direction.DESCENDING)
                                 .limit(1)
                                 .get()
                                 .addOnSuccessListener { messages ->
 
-                                    val lastMessage =
-                                        messages.documents.firstOrNull()
-                                            ?.getString("text")
-                                            ?: "Fillo bisedën"
+                                    val lastDocument = messages.documents.firstOrNull()
+                                    val lastType = lastDocument?.getString("type") ?: "text"
+
+                                    val lastMessage = when (lastType) {
+                                        "audio" -> "🎤 Mesazh zanor"
+                                        "image" -> "🖼️ Foto"
+                                        "video" -> "🎥 Video"
+                                        else -> lastDocument?.getString("text") ?: "Fillo bisedën"
+                                    }
 
                                     val row = LinearLayout(this)
                                     row.orientation = LinearLayout.HORIZONTAL
                                     row.gravity = Gravity.CENTER_VERTICAL
-                                    row.setPadding(
-                                        dp(12),
-                                        dp(12),
-                                        dp(12),
-                                        dp(12)
-                                    )
-                                    row.setBackgroundColor(
-                                        Color.rgb(38, 38, 38)
-                                    )
+                                    row.setPadding(dp(12), dp(12), dp(12), dp(12))
+                                    row.setBackgroundColor(Color.rgb(38, 38, 38))
 
                                     val avatar = TextView(this)
                                     avatar.text = "🦅"
                                     avatar.textSize = 27f
                                     avatar.gravity = Gravity.CENTER
 
-                                    val avatarBackground =
-                                        GradientDrawable()
-
-                                    avatarBackground.shape =
-                                        GradientDrawable.OVAL
-
-                                    avatarBackground.setColor(
-                                        Color.rgb(110, 15, 25)
-                                    )
-
-                                    avatarBackground.setStroke(
-                                        dp(2),
-                                        gold
-                                    )
-
+                                    val avatarBackground = GradientDrawable()
+                                    avatarBackground.shape = GradientDrawable.OVAL
+                                    avatarBackground.setColor(Color.rgb(110, 15, 25))
+                                    avatarBackground.setStroke(dp(2), gold)
                                     avatar.background = avatarBackground
 
-                                    val avatarParams =
-                                        LinearLayout.LayoutParams(
-                                            dp(56),
-                                            dp(56)
-                                        )
-
-                                    avatarParams.setMargins(
-                                        0,
-                                        0,
-                                        dp(14),
-                                        0
-                                    )
-
+                                    val avatarParams = LinearLayout.LayoutParams(dp(56), dp(56))
+                                    avatarParams.setMargins(0, 0, dp(14), 0)
                                     row.addView(avatar, avatarParams)
 
                                     val textLayout = LinearLayout(this)
-                                    textLayout.orientation =
-                                        LinearLayout.VERTICAL
+                                    textLayout.orientation = LinearLayout.VERTICAL
 
                                     val name = TextView(this)
                                     name.text = "@$username"
@@ -885,38 +755,18 @@ class MainActivity : Activity() {
                                     preview.textSize = 14f
                                     preview.setTextColor(Color.LTGRAY)
                                     preview.maxLines = 1
-                                    preview.ellipsize =
-                                        android.text.TextUtils.TruncateAt.END
+                                    preview.ellipsize = android.text.TextUtils.TruncateAt.END
                                     preview.setPadding(0, dp(5), 0, 0)
 
                                     textLayout.addView(name)
                                     textLayout.addView(preview)
+                                    row.addView(textLayout, LinearLayout.LayoutParams(0, -2, 1f))
 
-                                    row.addView(
-                                        textLayout,
-                                        LinearLayout.LayoutParams(
-                                            0,
-                                            -2,
-                                            1f
-                                        )
-                                    )
-
-                                    val params =
-                                        LinearLayout.LayoutParams(-1, -2)
-
-                                    params.setMargins(
-                                        dp(3),
-                                        dp(5),
-                                        dp(3),
-                                        dp(5)
-                                    )
+                                    val params = LinearLayout.LayoutParams(-1, -2)
+                                    params.setMargins(dp(3), dp(5), dp(3), dp(5))
 
                                     row.setOnClickListener {
-                                        showChat(
-                                            document.id,
-                                            username,
-                                            otherUid
-                                        )
+                                        showChat(document.id, username, otherUid)
                                     }
 
                                     chatList.addView(row, params)
@@ -954,8 +804,7 @@ class MainActivity : Activity() {
         val description = TextView(this)
         description.text =
             "Këtu do të shfaqet historiku i telefonatave.\n\n" +
-            "Për të telefonuar një kontakt, hap kategorinë Chats " +
-            "dhe zgjidh personin që dëshiron të telefonosh."
+            "Për të telefonuar një kontakt, hap kategorinë Chats dhe zgjidh personin që dëshiron të telefonosh."
         description.textSize = 15f
         description.setTextColor(Color.LTGRAY)
         description.gravity = Gravity.CENTER
@@ -965,18 +814,10 @@ class MainActivity : Activity() {
         val chatsButton = Button(this)
         chatsButton.text = "HAP CHATS"
         chatsButton.isAllCaps = false
-        chatsButton.setOnClickListener {
-            showHome("chats")
-        }
-        page.addView(
-            chatsButton,
-            LinearLayout.LayoutParams(-1, dp(52))
-        )
+        chatsButton.setOnClickListener { showHome("chats") }
+        page.addView(chatsButton, LinearLayout.LayoutParams(-1, dp(52)))
 
-        content.addView(
-            page,
-            FrameLayout.LayoutParams(-1, -1)
-        )
+        content.addView(page, FrameLayout.LayoutParams(-1, -1))
     }
 
     private fun showProfileDialog() {
@@ -986,9 +827,7 @@ class MainActivity : Activity() {
             .setTitle("Profili im 🦅")
             .setMessage("CHAT SHQIPONJA\n\nEmail: $email")
             .setPositiveButton("MBYLL", null)
-            .setNeutralButton("DIL NGA LLOGARIA") { _, _ ->
-                confirmLogout()
-            }
+            .setNeutralButton("DIL NGA LLOGARIA") { _, _ -> confirmLogout() }
             .show()
     }
 
@@ -996,24 +835,24 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle("Dil nga llogaria")
             .setMessage("A dëshiron të dalësh nga llogaria?")
-            .setPositiveButton("PO, DIL") { _, _ ->
-                logout()
-            }
+            .setPositiveButton("PO, DIL") { _, _ -> logout() }
             .setNegativeButton("ANULO", null)
             .show()
     }
 
     private fun logout() {
+        stopRecording(false)
+        releasePlayer()
+
         chatsListener?.remove()
         messagesListener?.remove()
-
         chatsListener = null
         messagesListener = null
 
         if (zegoInitialized) {
             try {
                 ZegoUIKitPrebuiltCallService.unInit()
-            } catch (e: Throwable) {
+            } catch (_: Throwable) {
                 toast("Gabim gjatë mbylljes së ZEGO-s")
             }
             zegoInitialized = false
@@ -1042,9 +881,7 @@ class MainActivity : Activity() {
             .setView(input)
             .setPositiveButton("KËRKO") { _, _ ->
                 val query = input.text.toString().trim()
-                if (query.isNotEmpty()) {
-                    searchUser(query)
-                }
+                if (query.isNotEmpty()) searchUser(query)
             }
             .setNegativeButton("ANULO", null)
             .show()
@@ -1055,21 +892,15 @@ class MainActivity : Activity() {
 
         val userData = hashMapOf(
             "uid" to user.uid,
-            "username" to (
-                user.email?.substringBefore("@")?.lowercase()
-                    ?: "user"
-            ),
+            "username" to (user.email?.substringBefore("@")?.lowercase() ?: "user"),
             "createdAt" to System.currentTimeMillis()
         )
 
-        db.collection("users")
-            .document(user.uid)
-            .set(userData)
+        db.collection("users").document(user.uid).set(userData)
     }
 
     private fun searchUser(query: String) {
         val currentUid = auth.currentUser?.uid
-
         if (currentUid == null) {
             toast("Duhet të hysh në llogari")
             return
@@ -1082,9 +913,7 @@ class MainActivity : Activity() {
             .get()
             .addOnSuccessListener { documents ->
 
-                val otherUsers = documents.filter {
-                    it.id != currentUid
-                }
+                val otherUsers = documents.filter { it.id != currentUid }
 
                 if (otherUsers.isEmpty()) {
                     AlertDialog.Builder(this)
@@ -1094,8 +923,7 @@ class MainActivity : Activity() {
                         .show()
                 } else {
                     val user = otherUsers.first()
-                    val foundUsername =
-                        user.getString("username") ?: "Përdorues"
+                    val foundUsername = user.getString("username") ?: "Përdorues"
 
                     AlertDialog.Builder(this)
                         .setTitle("U gjet përdoruesi! 🦅")
@@ -1112,17 +940,10 @@ class MainActivity : Activity() {
             }
     }
 
-    private fun openChat(
-        otherUserId: String,
-        otherUsername: String
-    ) {
+    private fun openChat(otherUserId: String, otherUsername: String) {
         val currentUserId = auth.currentUser?.uid ?: return
 
-        val participants = listOf(
-            currentUserId,
-            otherUserId
-        ).sorted()
-
+        val participants = listOf(currentUserId, otherUserId).sorted()
         val chatId = participants.joinToString("_")
 
         val chatData = hashMapOf(
@@ -1132,10 +953,7 @@ class MainActivity : Activity() {
 
         db.collection("chats")
             .document(chatId)
-            .set(
-                chatData,
-                com.google.firebase.firestore.SetOptions.merge()
-            )
+            .set(chatData, com.google.firebase.firestore.SetOptions.merge())
             .addOnSuccessListener {
                 showChat(chatId, otherUsername, otherUserId)
             }
@@ -1144,7 +962,10 @@ class MainActivity : Activity() {
             }
     }
 
+    // ==========================================
     // FAQJA E BISEDES
+    // ==========================================
+
     private fun showChat(
         chatId: String,
         otherUsername: String,
@@ -1155,7 +976,6 @@ class MainActivity : Activity() {
 
         chatsListener?.remove()
         chatsListener = null
-
         messagesListener?.remove()
         messagesListener = null
 
@@ -1166,7 +986,6 @@ class MainActivity : Activity() {
         page.orientation = LinearLayout.VERTICAL
         page.setBackgroundColor(Color.rgb(12, 12, 15))
 
-        // KREU I BISEDES
         val header = LinearLayout(this)
         header.orientation = LinearLayout.HORIZONTAL
         header.gravity = Gravity.CENTER_VERTICAL
@@ -1183,22 +1002,14 @@ class MainActivity : Activity() {
         header.background = headerBg
         header.elevation = dp(5).toFloat()
 
-        // KTHEHU MBRAPA
         val back = TextView(this)
         back.text = "‹"
         back.textSize = 38f
         back.setTextColor(Color.WHITE)
         back.gravity = Gravity.CENTER
-        back.setOnClickListener {
-            showHome("chats")
-        }
+        back.setOnClickListener { showHome("chats") }
+        header.addView(back, LinearLayout.LayoutParams(dp(38), dp(54)))
 
-        header.addView(
-            back,
-            LinearLayout.LayoutParams(dp(38), dp(54))
-        )
-
-        // AVATARI RRETHOR
         val avatar = TextView(this)
         avatar.text = "🦅"
         avatar.textSize = 27f
@@ -1210,14 +1021,10 @@ class MainActivity : Activity() {
         avatarBg.setStroke(dp(2), gold)
         avatar.background = avatarBg
 
-        val avatarParams = LinearLayout.LayoutParams(
-            dp(48),
-            dp(48)
-        )
+        val avatarParams = LinearLayout.LayoutParams(dp(48), dp(48))
         avatarParams.setMargins(dp(3), 0, dp(9), 0)
         header.addView(avatar, avatarParams)
 
-        // EMRI DHE STATUSI
         val contactInfo = LinearLayout(this)
         contactInfo.orientation = LinearLayout.VERTICAL
         contactInfo.gravity = Gravity.CENTER_VERTICAL
@@ -1236,49 +1043,24 @@ class MainActivity : Activity() {
 
         contactInfo.addView(name)
         contactInfo.addView(status)
+        header.addView(contactInfo, LinearLayout.LayoutParams(0, -2, 1f))
 
-        header.addView(
-            contactInfo,
-            LinearLayout.LayoutParams(0, -2, 1f)
-        )
-
-        // TELEFONATA ZANORE
-        val voiceCall = createCallButton(
-            otherUserId,
-            otherUsername,
-            false
-        )
-
+        val voiceCall = createCallButton(otherUserId, otherUsername, false)
         voiceCall.text = "📞"
         voiceCall.textSize = 20f
         voiceCall.setPadding(0, 0, 0, 0)
-
-        val voiceParams = LinearLayout.LayoutParams(
-            dp(43),
-            dp(43)
-        )
+        val voiceParams = LinearLayout.LayoutParams(dp(43), dp(43))
         voiceParams.setMargins(dp(2), 0, dp(2), 0)
         header.addView(voiceCall, voiceParams)
 
-        // VIDEO CALL
-        val videoCall = createCallButton(
-            otherUserId,
-            otherUsername,
-            true
-        )
-
+        val videoCall = createCallButton(otherUserId, otherUsername, true)
         videoCall.text = "📹"
         videoCall.textSize = 20f
         videoCall.setPadding(0, 0, 0, 0)
-
-        val videoParams = LinearLayout.LayoutParams(
-            dp(43),
-            dp(43)
-        )
+        val videoParams = LinearLayout.LayoutParams(dp(43), dp(43))
         videoParams.setMargins(dp(2), 0, dp(2), 0)
         header.addView(videoCall, videoParams)
 
-        // MENUJA ME TRE PIKA
         val menuButton = TextView(this)
         menuButton.text = "⋮"
         menuButton.textSize = 29f
@@ -1296,37 +1078,26 @@ class MainActivity : Activity() {
                     "Profili i kontaktit" -> {
                         AlertDialog.Builder(this)
                             .setTitle("🦅 Profili")
-                            .setMessage(
-                                "Emri: ${otherUsername.removePrefix("@")}\n\n" +
-                                "CHAT SHQIPONJA"
-                            )
+                            .setMessage("Emri: ${otherUsername.removePrefix("@")}\n\nCHAT SHQIPONJA")
                             .setPositiveButton("MBYLL", null)
                             .show()
                         true
                     }
-
                     "Privatësia" -> {
                         showPrivacyDialog()
                         true
                     }
-
                     "Mbyll bisedën" -> {
                         showHome("chats")
                         true
                     }
-
                     else -> false
                 }
             }
             popup.show()
         }
+        header.addView(menuButton, LinearLayout.LayoutParams(dp(35), dp(48)))
 
-        header.addView(
-            menuButton,
-            LinearLayout.LayoutParams(dp(35), dp(48))
-        )
-
-        // SFONDI DHE LISTA E MESAZHEVE
         val conversation = FrameLayout(this)
         conversation.setBackgroundColor(Color.rgb(14, 14, 18))
 
@@ -1336,70 +1107,37 @@ class MainActivity : Activity() {
 
         val messageList = LinearLayout(this)
         messageList.orientation = LinearLayout.VERTICAL
-        messageList.setPadding(
-            dp(12),
-            dp(16),
-            dp(12),
-            dp(16)
-        )
+        messageList.setPadding(dp(12), dp(16), dp(12), dp(16))
 
-        scrollView.addView(
-            messageList,
-            FrameLayout.LayoutParams(-1, -2)
-        )
+        scrollView.addView(messageList, FrameLayout.LayoutParams(-1, -2))
+        conversation.addView(scrollView, FrameLayout.LayoutParams(-1, -1))
 
-        conversation.addView(
-            scrollView,
-            FrameLayout.LayoutParams(-1, -1)
-        )
-
-        // ==========================================
-        // FUSHA E MESAZHIT - EMOJI, MESAZHE, VOICE,
-        // UPLOAD DHE DERGIM
-        // ==========================================
-
+        // FUSHA E MESAZHIT
         val inputPanel = LinearLayout(this)
         inputPanel.orientation = LinearLayout.HORIZONTAL
         inputPanel.gravity = Gravity.CENTER_VERTICAL
-        inputPanel.setPadding(
-            dp(8),
-            dp(9),
-            dp(8),
-            dp(9)
-        )
+        inputPanel.setPadding(dp(8), dp(9), dp(8), dp(9))
         inputPanel.setBackgroundColor(Color.rgb(25, 25, 29))
 
-        // BUTONI EMOJI NE ANEN E MAJTE
         val emojiButton = TextView(this)
         emojiButton.text = "😊"
         emojiButton.textSize = 25f
         emojiButton.gravity = Gravity.CENTER
         emojiButton.setTextColor(Color.WHITE)
 
-        val emojiParams = LinearLayout.LayoutParams(
-            dp(42),
-            dp(48)
-        )
+        val emojiParams = LinearLayout.LayoutParams(dp(42), dp(48))
         emojiParams.setMargins(0, 0, dp(5), 0)
-
         inputPanel.addView(emojiButton, emojiParams)
 
-        // HAPESIRA KU SHKRUHET MESAZHI
         val messageInput = EditText(this)
         messageInput.hint = "Mesazhe"
         messageInput.textSize = 15f
         messageInput.setTextColor(Color.WHITE)
         messageInput.setHintTextColor(Color.LTGRAY)
         messageInput.inputType =
-            InputType.TYPE_CLASS_TEXT or
-            InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         messageInput.maxLines = 4
-        messageInput.setPadding(
-            dp(14),
-            dp(9),
-            dp(14),
-            dp(9)
-        )
+        messageInput.setPadding(dp(14), dp(9), dp(14), dp(9))
 
         val inputBg = GradientDrawable()
         inputBg.setColor(Color.rgb(45, 45, 50))
@@ -1407,42 +1145,28 @@ class MainActivity : Activity() {
         inputBg.setStroke(dp(1), Color.rgb(95, 75, 65))
         messageInput.background = inputBg
 
-        inputPanel.addView(
-            messageInput,
-            LinearLayout.LayoutParams(0, -2, 1f)
-        )
+        inputPanel.addView(messageInput, LinearLayout.LayoutParams(0, -2, 1f))
 
-        // BUTONI VOICE
         val voiceButton = TextView(this)
         voiceButton.text = "🎤"
         voiceButton.textSize = 23f
         voiceButton.gravity = Gravity.CENTER
         voiceButton.setTextColor(Color.WHITE)
 
-        val voiceButtonParams = LinearLayout.LayoutParams(
-            dp(42),
-            dp(48)
-        )
+        val voiceButtonParams = LinearLayout.LayoutParams(dp(42), dp(48))
         voiceButtonParams.setMargins(dp(3), 0, 0, 0)
-
         inputPanel.addView(voiceButton, voiceButtonParams)
 
-        // BUTONI UPLOAD
         val uploadButton = TextView(this)
         uploadButton.text = "📎"
         uploadButton.textSize = 24f
         uploadButton.gravity = Gravity.CENTER
         uploadButton.setTextColor(Color.WHITE)
 
-        val uploadParams = LinearLayout.LayoutParams(
-            dp(42),
-            dp(48)
-        )
+        val uploadParams = LinearLayout.LayoutParams(dp(42), dp(48))
         uploadParams.setMargins(dp(2), 0, 0, 0)
-
         inputPanel.addView(uploadButton, uploadParams)
 
-        // BUTONI DERGO
         val sendButton = TextView(this)
         sendButton.text = "➤"
         sendButton.textSize = 23f
@@ -1457,97 +1181,46 @@ class MainActivity : Activity() {
         sendButton.background = sendBg
         sendButton.elevation = dp(3).toFloat()
 
-        val sendParams = LinearLayout.LayoutParams(
-            dp(46),
-            dp(46)
-        )
+        val sendParams = LinearLayout.LayoutParams(dp(46), dp(46))
         sendParams.setMargins(dp(5), 0, 0, 0)
-
         inputPanel.addView(sendButton, sendParams)
 
-        // ZGJEDHJA E EMOJI
         emojiButton.setOnClickListener {
             val popup = PopupMenu(this, emojiButton)
-
             val emojis = listOf(
-                "😀",
-                "😂",
-                "😍",
-                "🥰",
-                "😘",
-                "❤️",
-                "👍",
-                "🙏",
-                "🔥",
-                "😎",
-                "😭",
-                "🤣",
-                "😊",
-                "😉",
-                "👏",
-                "💪",
-                "🎉",
-                "🦅"
+                "😀", "😂", "😍", "🥰", "😘", "❤️", "👍", "🙏",
+                "🔥", "😎", "😭", "🤣", "😊", "😉", "👏", "💪",
+                "🎉", "🦅"
             )
-
-            emojis.forEach { emoji ->
-                popup.menu.add(emoji)
-            }
+            emojis.forEach { popup.menu.add(it) }
 
             popup.setOnMenuItemClickListener { item ->
-                val emoji = item.title.toString()
-                val position =
-                    messageInput.selectionStart.coerceAtLeast(0)
-
-                messageInput.text.insert(position, emoji)
+                val position = messageInput.selectionStart.coerceAtLeast(0)
+                messageInput.text.insert(position, item.title.toString())
                 true
             }
-
             popup.show()
         }
 
-        // VOICE
+        // FILLIM / NDALIM I REGJISTRIMIT ZANOR
         voiceButton.setOnClickListener {
-            toast("Regjistrimi i mesazheve zanore do të shtohet.")
-        }
-
-        // UPLOAD - HAP ZGJEDHJEN E SKEDAREVE
-        uploadButton.setOnClickListener {
-            try {
-                val intent = android.content.Intent(
-                    android.content.Intent.ACTION_GET_CONTENT
-                )
-
-                intent.type = "*/*"
-                intent.addCategory(
-                    android.content.Intent.CATEGORY_OPENABLE
-                )
-
-                startActivityForResult(
-                    android.content.Intent.createChooser(
-                        intent,
-                        "Zgjidh skedarin"
-                    ),
-                    3001
-                )
-            } catch (e: Exception) {
-                toast("Nuk u hap zgjedhja e skedarëve.")
+            if (isRecording) {
+                stopRecording(true)
+            } else {
+                startVoiceRecording(chatId, voiceButton)
             }
         }
 
-        // SHTO ELEMENTET NE FAQEN E BISEDES
+        // ZGJEDH FOTO OSE VIDEO
+        uploadButton.setOnClickListener {
+            openMediaPicker(chatId)
+        }
+
         page.addView(header)
-
-        page.addView(
-            conversation,
-            LinearLayout.LayoutParams(-1, 0, 1f)
-        )
-
+        page.addView(conversation, LinearLayout.LayoutParams(-1, 0, 1f))
         page.addView(inputPanel)
-
         setContentView(page)
 
-        // DERGIMI I MESAZHEVE
         fun sendMessage() {
             val text = messageInput.text.toString().trim()
             val senderId = auth.currentUser?.uid
@@ -1558,7 +1231,6 @@ class MainActivity : Activity() {
             }
 
             if (text.isEmpty()) return
-
             if (text.length > 4000) {
                 toast("Mesazhi është shumë i gjatë")
                 return
@@ -1566,6 +1238,7 @@ class MainActivity : Activity() {
 
             val messageData = hashMapOf(
                 "senderId" to senderId,
+                "type" to "text",
                 "text" to text,
                 "createdAt" to System.currentTimeMillis()
             )
@@ -1589,11 +1262,14 @@ class MainActivity : Activity() {
                 }
         }
 
-        sendButton.setOnClickListener {
+        sendButton.setOnClickListener { sendMessage() }
+
+        messageInput.setOnEditorActionListener { _, _, _ ->
             sendMessage()
+            true
         }
 
-        // MARRJA E MESAZHEVE NGA FIREBASE
+        // MARRJA DHE SHFAQJA E MESAZHEVE
         messagesListener = db.collection("chats")
             .document(chatId)
             .collection("messages")
@@ -1606,95 +1282,113 @@ class MainActivity : Activity() {
                 }
 
                 messageList.removeAllViews()
-
                 val documents = snapshots?.documents ?: emptyList()
 
                 if (documents.isEmpty()) {
                     val empty = TextView(this)
-                    empty.text =
-                        "🦅\n\nKjo është biseda juaj e parë.\n" +
-                        "Dërgo një mesazh për të filluar!"
+                    empty.text = "🦅\n\nKjo është biseda juaj e parë.\nDërgo një mesazh për të filluar!"
                     empty.textSize = 15f
                     empty.gravity = Gravity.CENTER
                     empty.setTextColor(Color.LTGRAY)
-                    empty.setPadding(
-                        dp(20),
-                        dp(45),
-                        dp(20),
-                        dp(45)
-                    )
-                    messageList.addView(
-                        empty,
-                        LinearLayout.LayoutParams(-1, -2)
-                    )
+                    empty.setPadding(dp(20), dp(45), dp(20), dp(45))
+                    messageList.addView(empty, LinearLayout.LayoutParams(-1, -2))
                 }
 
                 documents.forEach { document ->
-                    val senderId =
-                        document.getString("senderId") ?: ""
-
-                    val text =
-                        document.getString("text") ?: ""
-
-                    val createdAt =
-                        document.getLong("createdAt") ?: 0L
-
-                    val isMine =
-                        senderId == auth.currentUser?.uid
+                    val senderId = document.getString("senderId") ?: ""
+                    val type = document.getString("type") ?: "text"
+                    val text = document.getString("text") ?: ""
+                    val audioUrl = document.getString("audioUrl")
+                    val mediaUrl = document.getString("mediaUrl")
+                    val createdAt = document.getLong("createdAt") ?: 0L
+                    val isMine = senderId == auth.currentUser?.uid
 
                     val row = LinearLayout(this)
                     row.orientation = LinearLayout.VERTICAL
-                    row.gravity =
-                        if (isMine) Gravity.END
-                        else Gravity.START
+                    row.gravity = if (isMine) Gravity.END else Gravity.START
 
-                    val bubble = TextView(this)
-                    bubble.text = text
-                    bubble.textSize = 15.5f
-                    bubble.setTextColor(Color.WHITE)
-                    bubble.setPadding(
-                        dp(15),
-                        dp(11),
-                        dp(15),
-                        dp(11)
-                    )
-                    bubble.maxWidth = dp(285)
+                    val bubble = LinearLayout(this)
+                    bubble.orientation = LinearLayout.VERTICAL
+                    bubble.setPadding(dp(12), dp(10), dp(12), dp(8))
+                    bubble.gravity = Gravity.CENTER_VERTICAL
 
                     val bubbleBg = GradientDrawable()
-
                     if (isMine) {
                         bubbleBg.setColor(Color.rgb(145, 15, 30))
-                        bubbleBg.setStroke(
-                            dp(1),
-                            Color.rgb(195, 115, 65)
-                        )
+                        bubbleBg.setStroke(dp(1), Color.rgb(195, 115, 65))
                     } else {
                         bubbleBg.setColor(Color.rgb(43, 43, 50))
-                        bubbleBg.setStroke(
-                            dp(1),
-                            Color.rgb(85, 75, 65)
-                        )
+                        bubbleBg.setStroke(dp(1), Color.rgb(85, 75, 65))
                     }
-
                     bubbleBg.cornerRadius = dp(19).toFloat()
                     bubble.background = bubbleBg
                     bubble.elevation = dp(2).toFloat()
 
-                    val bubbleParams =
-                        LinearLayout.LayoutParams(-2, -2)
+                    when (type) {
+                        "audio" -> {
+                            val audioButton = Button(this)
+                            audioButton.text = "▶️  Dëgjo mesazhin zanor"
+                            audioButton.isAllCaps = false
+                            audioButton.setOnClickListener {
+                                if (!audioUrl.isNullOrBlank()) {
+                                    playAudio(audioUrl)
+                                } else {
+                                    toast("Skedari zanor nuk u gjet.")
+                                }
+                            }
+                            bubble.addView(audioButton)
+                        }
 
-                    bubbleParams.setMargins(
-                        dp(3),
-                        dp(3),
-                        dp(3),
-                        dp(2)
-                    )
+                        "image" -> {
+                            val imageView = ImageView(this)
+                            imageView.adjustViewBounds = true
+                            imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+                            imageView.maxWidth = dp(250)
+                            imageView.maxHeight = dp(300)
+                            imageView.setImageResource(android.R.drawable.ic_menu_gallery)
+                            bubble.addView(
+                                imageView,
+                                LinearLayout.LayoutParams(dp(240), dp(220))
+                            )
 
+                            if (!mediaUrl.isNullOrBlank()) {
+                                loadImage(mediaUrl, imageView)
+                                imageView.setOnClickListener {
+                                    openMedia(mediaUrl, "image/*")
+                                }
+                            }
+                        }
+
+                        "video" -> {
+                            val videoButton = Button(this)
+                            videoButton.text = "▶️  Shiko videon"
+                            videoButton.isAllCaps = false
+                            videoButton.setOnClickListener {
+                                if (!mediaUrl.isNullOrBlank()) {
+                                    openMedia(mediaUrl, "video/*")
+                                } else {
+                                    toast("Videoja nuk u gjet.")
+                                }
+                            }
+                            bubble.addView(videoButton)
+                        }
+
+                        else -> {
+                            val textView = TextView(this)
+                            textView.text = text
+                            textView.textSize = 15.5f
+                            textView.setTextColor(Color.WHITE)
+                            textView.setPadding(dp(3), dp(2), dp(3), dp(2))
+                            textView.maxWidth = dp(285)
+                            bubble.addView(textView)
+                        }
+                    }
+
+                    val bubbleParams = LinearLayout.LayoutParams(-2, -2)
+                    bubbleParams.setMargins(dp(3), dp(3), dp(3), dp(2))
                     row.addView(bubble, bubbleParams)
 
-                    // ORA E MESAZHIT
                     val time = TextView(this)
-
                     time.text = if (createdAt > 0) {
                         java.text.SimpleDateFormat(
                             "HH:mm",
@@ -1703,32 +1397,14 @@ class MainActivity : Activity() {
                     } else {
                         ""
                     }
-
                     time.textSize = 10f
                     time.setTextColor(Color.LTGRAY)
-                    time.gravity =
-                        if (isMine) Gravity.END
-                        else Gravity.START
-
-                    time.setPadding(
-                        dp(7),
-                        dp(1),
-                        dp(7),
-                        dp(2)
-                    )
-
+                    time.gravity = if (isMine) Gravity.END else Gravity.START
+                    time.setPadding(dp(7), dp(1), dp(7), dp(2))
                     row.addView(time)
 
-                    val rowParams =
-                        LinearLayout.LayoutParams(-1, -2)
-
-                    rowParams.setMargins(
-                        0,
-                        dp(3),
-                        0,
-                        dp(3)
-                    )
-
+                    val rowParams = LinearLayout.LayoutParams(-1, -2)
+                    rowParams.setMargins(0, dp(3), 0, dp(3))
                     messageList.addView(row, rowParams)
                 }
 
@@ -1738,12 +1414,375 @@ class MainActivity : Activity() {
             }
     }
 
+    // ==========================================
+    // REGJISTRIMI I MESAZHIT ZANOR
+    // ==========================================
+
+    private fun startVoiceRecording(chatId: String, button: TextView) {
+        val user = auth.currentUser
+        if (user == null) {
+            toast("Duhet të hysh në llogari.")
+            return
+        }
+
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            pendingVoiceChatId = chatId
+            activeVoiceButton = button
+            requestPermissions(
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                4002
+            )
+            return
+        }
+
+        try {
+            val file = File(cacheDir, "voice_${UUID.randomUUID()}.m4a")
+            recordingFile = file
+            recordingChatId = chatId
+
+            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(this)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }
+
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            recorder.setAudioEncodingBitRate(128000)
+            recorder.setAudioSamplingRate(44100)
+            recorder.setOutputFile(file.absolutePath)
+            recorder.prepare()
+            recorder.start()
+
+            mediaRecorder = recorder
+            activeVoiceButton = button
+            isRecording = true
+            button.text = "⏹"
+            button.setTextColor(Color.RED)
+            toast("Po regjistrohet... Shtyp ⏹ për ta dërguar.")
+        } catch (e: Exception) {
+            isRecording = false
+            try {
+                mediaRecorder?.release()
+            } catch (_: Throwable) {
+            }
+            mediaRecorder = null
+            recordingFile?.delete()
+            recordingFile = null
+            button.text = "🎤"
+            button.setTextColor(Color.WHITE)
+            toast("Nuk filloi regjistrimi: ${e.message}")
+        }
+    }
+
+    private fun stopRecording(send: Boolean) {
+        val recorder = mediaRecorder
+        val file = recordingFile
+        val chatId = recordingChatId
+        val button = activeVoiceButton
+
+        isRecording = false
+        mediaRecorder = null
+        recordingFile = null
+        recordingChatId = null
+        activeVoiceButton = null
+
+        try {
+            recorder?.stop()
+        } catch (_: Throwable) {
+            toast("Regjistrimi ishte shumë i shkurtër.")
+        }
+
+        try {
+            recorder?.reset()
+            recorder?.release()
+        } catch (_: Throwable) {
+        }
+
+        button?.text = "🎤"
+        button?.setTextColor(Color.WHITE)
+
+        if (!send || file == null || chatId == null || !file.exists() || file.length() < 1000) {
+            file?.delete()
+            return
+        }
+
+        uploadVoice(file, chatId)
+    }
+
+    private fun uploadVoice(file: File, chatId: String) {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            file.delete()
+            toast("Duhet të hysh në llogari.")
+            return
+        }
+
+        toast("Po dërgohet mesazhi zanor...")
+
+        val storageRef = storage.reference.child(
+            "chat_media/$chatId/${UUID.randomUUID()}.m4a"
+        )
+
+        storageRef.putFile(Uri.fromFile(file))
+            .addOnSuccessListener {
+                storageRef.downloadUrl
+                    .addOnSuccessListener { downloadUri ->
+                        val messageData = hashMapOf(
+                            "senderId" to uid,
+                            "type" to "audio",
+                            "audioUrl" to downloadUri.toString(),
+                            "text" to "🎤 Mesazh zanor",
+                            "createdAt" to System.currentTimeMillis()
+                        )
+
+                        db.collection("chats")
+                            .document(chatId)
+                            .collection("messages")
+                            .add(messageData)
+                            .addOnSuccessListener {
+                                toast("Mesazhi zanor u dërgua! 🎤")
+                                file.delete()
+                            }
+                            .addOnFailureListener {
+                                toast("Gabim në dërgimin e mesazhit: ${it.message}")
+                                file.delete()
+                            }
+                    }
+                    .addOnFailureListener {
+                        toast("Nuk u mor lidhja e audios: ${it.message}")
+                        file.delete()
+                    }
+            }
+            .addOnFailureListener {
+                toast("Ngarkimi i audios dështoi: ${it.message}")
+                file.delete()
+            }
+    }
+
+    // ==========================================
+    // LUAJTJA E MESAZHIT ZANOR
+    // ==========================================
+
+    private fun playAudio(url: String) {
+        releasePlayer()
+
+        try {
+            val player = MediaPlayer()
+            mediaPlayer = player
+
+            player.setDataSource(url)
+            player.setOnPreparedListener {
+                it.start()
+                toast("Po luhet mesazhi zanor...")
+            }
+            player.setOnCompletionListener {
+                releasePlayer()
+            }
+            player.setOnErrorListener { _, _, _ ->
+                releasePlayer()
+                toast("Nuk u luajt mesazhi zanor.")
+                true
+            }
+            player.prepareAsync()
+        } catch (e: Exception) {
+            releasePlayer()
+            toast("Gabim në hapjen e audios: ${e.message}")
+        }
+    }
+
+    private fun releasePlayer() {
+        try {
+            mediaPlayer?.stop()
+        } catch (_: Throwable) {
+        }
+        try {
+            mediaPlayer?.release()
+        } catch (_: Throwable) {
+        }
+        mediaPlayer = null
+    }
+
+    // ==========================================
+    // ZGJEDHJA E FOTOVE DHE VIDEOVE
+    // ==========================================
+
+    private fun openMediaPicker(chatId: String) {
+        try {
+            pendingUploadChatId = chatId
+
+            val intent = Intent(Intent.ACTION_GET_CONTENT)
+            intent.type = "*/*"
+            intent.putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf("image/*", "video/*")
+            )
+            intent.addCategory(Intent.CATEGORY_OPENABLE)
+
+            startActivityForResult(
+                Intent.createChooser(intent, "Zgjidh foto ose video"),
+                3001
+            )
+        } catch (e: Exception) {
+            toast("Nuk u hap galeria: ${e.message}")
+        }
+    }
+
+    @Deprecated("Përdoret për zgjedhjen e medias")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == 3001 && resultCode == RESULT_OK) {
+            val uri = data?.data
+            val chatId = pendingUploadChatId
+            pendingUploadChatId = null
+
+            if (uri == null || chatId == null) {
+                toast("Nuk u zgjodh asnjë skedar.")
+                return
+            }
+
+            val mimeType = contentResolver.getType(uri) ?: ""
+
+            if (mimeType.startsWith("image/") || mimeType.startsWith("video/")) {
+                uploadMedia(uri, chatId, mimeType)
+            } else {
+                toast("Zgjidh një foto ose video.")
+            }
+        }
+    }
+
+    private fun uploadMedia(uri: Uri, chatId: String, mimeType: String) {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            toast("Duhet të hysh në llogari.")
+            return
+        }
+
+        val isImage = mimeType.startsWith("image/")
+        val type = if (isImage) "image" else "video"
+        val extension = if (isImage) "jpg" else "mp4"
+
+        toast(if (isImage) "Po dërgohet fotoja..." else "Po dërgohet videoja...")
+
+        val storageRef = storage.reference.child(
+            "chat_media/$chatId/${UUID.randomUUID()}.$extension"
+        )
+
+        storageRef.putFile(uri)
+            .addOnSuccessListener {
+                storageRef.downloadUrl
+                    .addOnSuccessListener { downloadUri ->
+
+                        val messageData = hashMapOf(
+                            "senderId" to uid,
+                            "type" to type,
+                            "mediaUrl" to downloadUri.toString(),
+                            "mimeType" to mimeType,
+                            "text" to if (isImage) "🖼️ Foto" else "🎥 Video",
+                            "createdAt" to System.currentTimeMillis()
+                        )
+
+                        db.collection("chats")
+                            .document(chatId)
+                            .collection("messages")
+                            .add(messageData)
+                            .addOnSuccessListener {
+                                toast(if (isImage) "Fotoja u dërgua! 🖼️" else "Videoja u dërgua! 🎥")
+                            }
+                            .addOnFailureListener {
+                                toast("Gabim në ruajtjen e medias: ${it.message}")
+                            }
+                    }
+                    .addOnFailureListener {
+                        toast("Nuk u mor lidhja e medias: ${it.message}")
+                    }
+            }
+            .addOnFailureListener {
+                toast("Ngarkimi dështoi: ${it.message}")
+            }
+    }
+
+    // ==========================================
+    // SHFAQJA E FOTOS DHE VIDEOS
+    // ==========================================
+
+    private fun loadImage(url: String, imageView: ImageView) {
+        Thread {
+            try {
+                val connection = java.net.URL(url).openConnection()
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
+
+                val bitmap = connection.getInputStream().use {
+                    BitmapFactory.decodeStream(it)
+                }
+
+                runOnUiThread {
+                    if (bitmap != null) {
+                        imageView.setImageBitmap(bitmap)
+                    } else {
+                        imageView.setImageResource(android.R.drawable.ic_menu_report_image)
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    imageView.setImageResource(android.R.drawable.ic_menu_report_image)
+                }
+            }
+        }.start()
+    }
+
+    private fun openMedia(url: String, mimeType: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.setDataAndType(Uri.parse(url), mimeType)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (_: Exception) {
+                toast("Nuk u hap skedari. Kontrollo nëse ke aplikacion për ta hapur.")
+            }
+        }
+    }
+
+    // ==========================================
+    // LEJET E MIKROFONIT
+    // ==========================================
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == 4002) {
+            if (grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            ) {
+                val chatId = pendingVoiceChatId
+                val button = activeVoiceButton
+                pendingVoiceChatId = null
+
+                if (chatId != null && button != null) {
+                    startVoiceRecording(chatId, button)
+                }
+            } else {
+                pendingVoiceChatId = null
+                activeVoiceButton?.text = "🎤"
+                activeVoiceButton = null
+                toast("Duhet të lejosh përdorimin e mikrofonit.")
+            }
+        }
+    }
+
     private fun toast(message: String) {
-        Toast.makeText(
-            this,
-            message,
-            Toast.LENGTH_LONG
-        ).show()
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
     override fun onDestroy() {
@@ -1751,6 +1790,10 @@ class MainActivity : Activity() {
         chatsListener?.remove()
         messagesListener = null
         chatsListener = null
+
+        stopRecording(false)
+        releasePlayer()
+
         super.onDestroy()
     }
 }
