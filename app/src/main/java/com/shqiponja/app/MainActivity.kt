@@ -1144,7 +1144,7 @@ class MainActivity : Activity() {
             }
     }
 
-    // FAQJA E RE E BISEDES
+    // FAQJA E BISEDES
     private fun showChat(
         chatId: String,
         otherUsername: String,
@@ -1343,7 +1343,6 @@ class MainActivity : Activity() {
             dp(16)
         )
 
-        // KORRIGJIMI I GABIMIT LayoutParams
         scrollView.addView(
             messageList,
             FrameLayout.LayoutParams(-1, -2)
@@ -1354,20 +1353,40 @@ class MainActivity : Activity() {
             FrameLayout.LayoutParams(-1, -1)
         )
 
-        // FUSHA E SHKRIMIT
+        // ==========================================
+        // FUSHA E MESAZHIT - EMOJI, MESAZHE, VOICE,
+        // UPLOAD DHE DERGIM
+        // ==========================================
+
         val inputPanel = LinearLayout(this)
         inputPanel.orientation = LinearLayout.HORIZONTAL
         inputPanel.gravity = Gravity.CENTER_VERTICAL
         inputPanel.setPadding(
+            dp(8),
             dp(9),
-            dp(9),
-            dp(9),
+            dp(8),
             dp(9)
         )
         inputPanel.setBackgroundColor(Color.rgb(25, 25, 29))
 
+        // BUTONI EMOJI NE ANEN E MAJTE
+        val emojiButton = TextView(this)
+        emojiButton.text = "😊"
+        emojiButton.textSize = 25f
+        emojiButton.gravity = Gravity.CENTER
+        emojiButton.setTextColor(Color.WHITE)
+
+        val emojiParams = LinearLayout.LayoutParams(
+            dp(42),
+            dp(48)
+        )
+        emojiParams.setMargins(0, 0, dp(5), 0)
+
+        inputPanel.addView(emojiButton, emojiParams)
+
+        // HAPESIRA KU SHKRUHET MESAZHI
         val messageInput = EditText(this)
-        messageInput.hint = "Shkruaj mesazhin..."
+        messageInput.hint = "Mesazhe"
         messageInput.textSize = 15f
         messageInput.setTextColor(Color.WHITE)
         messageInput.setHintTextColor(Color.LTGRAY)
@@ -1376,9 +1395,9 @@ class MainActivity : Activity() {
             InputType.TYPE_TEXT_FLAG_MULTI_LINE
         messageInput.maxLines = 4
         messageInput.setPadding(
-            dp(16),
+            dp(14),
             dp(9),
-            dp(16),
+            dp(14),
             dp(9)
         )
 
@@ -1388,6 +1407,42 @@ class MainActivity : Activity() {
         inputBg.setStroke(dp(1), Color.rgb(95, 75, 65))
         messageInput.background = inputBg
 
+        inputPanel.addView(
+            messageInput,
+            LinearLayout.LayoutParams(0, -2, 1f)
+        )
+
+        // BUTONI VOICE
+        val voiceButton = TextView(this)
+        voiceButton.text = "🎤"
+        voiceButton.textSize = 23f
+        voiceButton.gravity = Gravity.CENTER
+        voiceButton.setTextColor(Color.WHITE)
+
+        val voiceParams = LinearLayout.LayoutParams(
+            dp(42),
+            dp(48)
+        )
+        voiceParams.setMargins(dp(3), 0, 0, 0)
+
+        inputPanel.addView(voiceButton, voiceParams)
+
+        // BUTONI UPLOAD
+        val uploadButton = TextView(this)
+        uploadButton.text = "📎"
+        uploadButton.textSize = 24f
+        uploadButton.gravity = Gravity.CENTER
+        uploadButton.setTextColor(Color.WHITE)
+
+        val uploadParams = LinearLayout.LayoutParams(
+            dp(42),
+            dp(48)
+        )
+        uploadParams.setMargins(dp(2), 0, 0, 0)
+
+        inputPanel.addView(uploadButton, uploadParams)
+
+        // BUTONI DERGO
         val sendButton = TextView(this)
         sendButton.text = "➤"
         sendButton.textSize = 23f
@@ -1403,17 +1458,84 @@ class MainActivity : Activity() {
         sendButton.elevation = dp(3).toFloat()
 
         val sendParams = LinearLayout.LayoutParams(
-            dp(49),
-            dp(49)
+            dp(46),
+            dp(46)
         )
-        sendParams.setMargins(dp(8), 0, 0, 0)
+        sendParams.setMargins(dp(5), 0, 0, 0)
 
-        inputPanel.addView(
-            messageInput,
-            LinearLayout.LayoutParams(0, -2, 1f)
-        )
         inputPanel.addView(sendButton, sendParams)
 
+        // ZGJEDHJA E EMOJI
+        emojiButton.setOnClickListener {
+            val popup = PopupMenu(this, emojiButton)
+
+            val emojis = listOf(
+                "😀",
+                "😂",
+                "😍",
+                "🥰",
+                "😘",
+                "❤️",
+                "👍",
+                "🙏",
+                "🔥",
+                "😎",
+                "😭",
+                "🤣",
+                "😊",
+                "😉",
+                "👏",
+                "💪",
+                "🎉",
+                "🦅"
+            )
+
+            emojis.forEach { emoji ->
+                popup.menu.add(emoji)
+            }
+
+            popup.setOnMenuItemClickListener { item ->
+                val emoji = item.title.toString()
+                val position =
+                    messageInput.selectionStart.coerceAtLeast(0)
+
+                messageInput.text.insert(position, emoji)
+                true
+            }
+
+            popup.show()
+        }
+
+        // VOICE
+        voiceButton.setOnClickListener {
+            toast("Regjistrimi i mesazheve zanore do të shtohet.")
+        }
+
+        // UPLOAD - HAP ZGJEDHJEN E SKEDAREVE
+        uploadButton.setOnClickListener {
+            try {
+                val intent = android.content.Intent(
+                    android.content.Intent.ACTION_GET_CONTENT
+                )
+
+                intent.type = "*/*"
+                intent.addCategory(
+                    android.content.Intent.CATEGORY_OPENABLE
+                )
+
+                startActivityForResult(
+                    android.content.Intent.createChooser(
+                        intent,
+                        "Zgjidh skedarin"
+                    ),
+                    3001
+                )
+            } catch (e: Exception) {
+                toast("Nuk u hap zgjedhja e skedarëve.")
+            }
+        }
+
+        // SHTO ELEMENTET NE FAQEN E BISEDES
         page.addView(header)
 
         page.addView(
