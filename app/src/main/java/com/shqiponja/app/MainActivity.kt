@@ -21,6 +21,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         auth = FirebaseAuth.getInstance()
+        db = FirebaseFirestore.getInstance()
 
         if (auth.currentUser != null) {
             showHome()
