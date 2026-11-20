@@ -209,7 +209,6 @@ class MainActivity : Activity() {
         }
     }
 
-    // KTHEN BUTONIN E ZEGO-S ME TIPIN E SAKTE
     private fun createCallButton(
         otherUserId: String,
         otherUsername: String,
@@ -480,7 +479,6 @@ class MainActivity : Activity() {
         }
     }
 
-    // EKRANI KRYESOR ME KATEGORITE POSHTE
     private fun showHome(tab: String = selectedHomeTab) {
         selectedHomeTab = tab
 
@@ -499,7 +497,6 @@ class MainActivity : Activity() {
         layout.orientation = LinearLayout.VERTICAL
         layout.setBackgroundColor(black)
 
-        // KREU I APLIKACIONIT
         val header = LinearLayout(this)
         header.orientation = LinearLayout.HORIZONTAL
         header.gravity = Gravity.CENTER_VERTICAL
@@ -518,7 +515,6 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(0, -2, 1f)
         )
 
-        // BUTONI ME TRE PIKA
         val settingsButton = TextView(this)
         settingsButton.text = "⋮"
         settingsButton.textSize = 34f
@@ -535,11 +531,9 @@ class MainActivity : Activity() {
 
         header.addView(settingsButton)
 
-        // HAPESIRA E KATEGORISE
         val content = FrameLayout(this)
         content.setBackgroundColor(black)
 
-        // NAVIGIMI POSHTE
         val bottomNav = LinearLayout(this)
         bottomNav.orientation = LinearLayout.HORIZONTAL
         bottomNav.gravity = Gravity.CENTER
@@ -624,7 +618,6 @@ class MainActivity : Activity() {
         showChatsPage(content, uid)
     }
 
-    // MENUJA ME TRE PIKA
     private fun showMainMenu(anchor: View) {
         val popup = PopupMenu(this, anchor)
 
@@ -662,7 +655,6 @@ class MainActivity : Activity() {
         popup.show()
     }
 
-    // FAQJA E CILETIMEVE
     private fun showSettingsDialog() {
         val email = auth.currentUser?.email ?: "Vizitor"
 
@@ -683,7 +675,6 @@ class MainActivity : Activity() {
             .show()
     }
 
-    // PRIVATESIA
     private fun showPrivacyDialog() {
         val message =
             "PRIVATËSIA E LLOGARISË\n\n" +
@@ -699,7 +690,6 @@ class MainActivity : Activity() {
             .show()
     }
 
-    // KATEGORIA CHATS
     private fun showChatsPage(
         content: FrameLayout,
         uid: String?
@@ -936,7 +926,6 @@ class MainActivity : Activity() {
             }
     }
 
-    // KATEGORIA CALLS
     private fun showCallsPage(content: FrameLayout) {
         val density = resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
@@ -1155,7 +1144,7 @@ class MainActivity : Activity() {
             }
     }
 
-    // BISEDË - TELEFONATA DHE VIDEO NE KRYE DJATHTAS
+    // FAQJA E RE E BISEDES
     private fun showChat(
         chatId: String,
         otherUsername: String,
@@ -1173,48 +1162,87 @@ class MainActivity : Activity() {
         val density = resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
 
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setBackgroundColor(black)
+        val page = LinearLayout(this)
+        page.orientation = LinearLayout.VERTICAL
+        page.setBackgroundColor(Color.rgb(12, 12, 15))
 
         // KREU I BISEDES
         val header = LinearLayout(this)
         header.orientation = LinearLayout.HORIZONTAL
         header.gravity = Gravity.CENTER_VERTICAL
-        header.setPadding(dp(4), dp(5), dp(4), dp(5))
-        header.setBackgroundColor(red)
+        header.setPadding(dp(5), dp(8), dp(5), dp(8))
 
-        // KTHIMI MBRAPA
+        val headerBg = GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            intArrayOf(
+                Color.rgb(75, 5, 15),
+                Color.rgb(155, 12, 30),
+                Color.rgb(75, 5, 15)
+            )
+        )
+        header.background = headerBg
+        header.elevation = dp(5).toFloat()
+
+        // KTHEHU MBRAPA
         val back = TextView(this)
         back.text = "‹"
-        back.textSize = 35f
-        back.setTextColor(white)
+        back.textSize = 38f
+        back.setTextColor(Color.WHITE)
         back.gravity = Gravity.CENTER
-        back.setPadding(dp(7), 0, dp(7), 0)
         back.setOnClickListener {
             showHome("chats")
         }
 
         header.addView(
             back,
-            LinearLayout.LayoutParams(dp(38), dp(50))
+            LinearLayout.LayoutParams(dp(38), dp(54))
         )
 
-        // EMRI I KONTAKTIT
+        // AVATARI RRETHOR
+        val avatar = TextView(this)
+        avatar.text = "🦅"
+        avatar.textSize = 27f
+        avatar.gravity = Gravity.CENTER
+
+        val avatarBg = GradientDrawable()
+        avatarBg.shape = GradientDrawable.OVAL
+        avatarBg.setColor(Color.rgb(45, 12, 18))
+        avatarBg.setStroke(dp(2), gold)
+        avatar.background = avatarBg
+
+        val avatarParams = LinearLayout.LayoutParams(
+            dp(48),
+            dp(48)
+        )
+        avatarParams.setMargins(dp(3), 0, dp(9), 0)
+        header.addView(avatar, avatarParams)
+
+        // EMRI DHE STATUSI
+        val contactInfo = LinearLayout(this)
+        contactInfo.orientation = LinearLayout.VERTICAL
+        contactInfo.gravity = Gravity.CENTER_VERTICAL
+
         val name = TextView(this)
-        name.text = "@$otherUsername"
-        name.textSize = 17f
+        name.text = otherUsername.removePrefix("@")
+        name.textSize = 16f
         name.typeface = Typeface.DEFAULT_BOLD
-        name.setTextColor(white)
-        name.gravity = Gravity.CENTER_VERTICAL
+        name.setTextColor(Color.WHITE)
         name.maxLines = 1
 
+        val status = TextView(this)
+        status.text = "Bisedë në CHAT SHQIPONJA"
+        status.textSize = 11f
+        status.setTextColor(Color.rgb(235, 195, 115))
+
+        contactInfo.addView(name)
+        contactInfo.addView(status)
+
         header.addView(
-            name,
-            LinearLayout.LayoutParams(0, -1, 1f)
+            contactInfo,
+            LinearLayout.LayoutParams(0, -2, 1f)
         )
 
-        // BUTONI TELEFONATA ZANORE
+        // TELEFONATA ZANORE
         val voiceCall = createCallButton(
             otherUserId,
             otherUsername,
@@ -1222,18 +1250,17 @@ class MainActivity : Activity() {
         )
 
         voiceCall.text = "📞"
-        voiceCall.textSize = 21f
+        voiceCall.textSize = 20f
         voiceCall.setPadding(0, 0, 0, 0)
 
         val voiceParams = LinearLayout.LayoutParams(
-            dp(46),
-            dp(46)
+            dp(43),
+            dp(43)
         )
         voiceParams.setMargins(dp(2), 0, dp(2), 0)
-
         header.addView(voiceCall, voiceParams)
 
-        // BUTONI VIDEO CALL
+        // VIDEO CALL
         val videoCall = createCallButton(
             otherUserId,
             otherUsername,
@@ -1241,104 +1268,177 @@ class MainActivity : Activity() {
         )
 
         videoCall.text = "📹"
-        videoCall.textSize = 21f
+        videoCall.textSize = 20f
         videoCall.setPadding(0, 0, 0, 0)
 
         val videoParams = LinearLayout.LayoutParams(
-            dp(46),
-            dp(46)
+            dp(43),
+            dp(43)
         )
         videoParams.setMargins(dp(2), 0, dp(2), 0)
-
         header.addView(videoCall, videoParams)
 
-        // TRE PIKAT - SETTINGS
+        // MENUJA ME TRE PIKA
         val menuButton = TextView(this)
         menuButton.text = "⋮"
-        menuButton.textSize = 30f
+        menuButton.textSize = 29f
         menuButton.typeface = Typeface.DEFAULT_BOLD
-        menuButton.setTextColor(white)
+        menuButton.setTextColor(Color.WHITE)
         menuButton.gravity = Gravity.CENTER
-        menuButton.setPadding(dp(3), 0, dp(3), 0)
         menuButton.setOnClickListener {
-            showMainMenu(menuButton)
+            val popup = PopupMenu(this, menuButton)
+            popup.menu.add("Profili i kontaktit")
+            popup.menu.add("Privatësia")
+            popup.menu.add("Mbyll bisedën")
+
+            popup.setOnMenuItemClickListener { item ->
+                when (item.title.toString()) {
+                    "Profili i kontaktit" -> {
+                        AlertDialog.Builder(this)
+                            .setTitle("🦅 Profili")
+                            .setMessage(
+                                "Emri: ${otherUsername.removePrefix("@")}\n\n" +
+                                "CHAT SHQIPONJA"
+                            )
+                            .setPositiveButton("MBYLL", null)
+                            .show()
+                        true
+                    }
+
+                    "Privatësia" -> {
+                        showPrivacyDialog()
+                        true
+                    }
+
+                    "Mbyll bisedën" -> {
+                        showHome("chats")
+                        true
+                    }
+
+                    else -> false
+                }
+            }
+            popup.show()
         }
 
         header.addView(
             menuButton,
-            LinearLayout.LayoutParams(dp(38), dp(48))
+            LinearLayout.LayoutParams(dp(35), dp(48))
         )
 
-        // LISTA E MESAZHEVE
+        // SFONDI DHE LISTA E MESAZHEVE
+        val conversation = FrameLayout(this)
+        conversation.setBackgroundColor(Color.rgb(14, 14, 18))
+
         val scrollView = ScrollView(this)
+        scrollView.isFillViewport = true
+        scrollView.setClipToPadding(false)
 
         val messageList = LinearLayout(this)
         messageList.orientation = LinearLayout.VERTICAL
         messageList.setPadding(
             dp(12),
+            dp(16),
             dp(12),
-            dp(12),
-            dp(12)
+            dp(16)
         )
 
-        scrollView.addView(messageList)
+        scrollView.addView(
+            messageList,
+            ScrollView.LayoutParams(-1, -2)
+        )
+
+        conversation.addView(
+            scrollView,
+            FrameLayout.LayoutParams(-1, -1)
+        )
 
         // FUSHA E SHKRIMIT
-        val inputLayout = LinearLayout(this)
-        inputLayout.orientation = LinearLayout.HORIZONTAL
-        inputLayout.gravity = Gravity.CENTER_VERTICAL
-        inputLayout.setPadding(
-            dp(8),
-            dp(8),
-            dp(8),
-            dp(8)
+        val inputPanel = LinearLayout(this)
+        inputPanel.orientation = LinearLayout.HORIZONTAL
+        inputPanel.gravity = Gravity.CENTER_VERTICAL
+        inputPanel.setPadding(
+            dp(9),
+            dp(9),
+            dp(9),
+            dp(9)
         )
+        inputPanel.setBackgroundColor(Color.rgb(25, 25, 29))
 
         val messageInput = EditText(this)
         messageInput.hint = "Shkruaj mesazhin..."
-        messageInput.setTextColor(white)
+        messageInput.textSize = 15f
+        messageInput.setTextColor(Color.WHITE)
         messageInput.setHintTextColor(Color.LTGRAY)
         messageInput.inputType =
             InputType.TYPE_CLASS_TEXT or
             InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        messageInput.maxLines = 3
+        messageInput.maxLines = 4
+        messageInput.setPadding(
+            dp(16),
+            dp(9),
+            dp(16),
+            dp(9)
+        )
 
-        val sendButton = Button(this)
+        val inputBg = GradientDrawable()
+        inputBg.setColor(Color.rgb(45, 45, 50))
+        inputBg.cornerRadius = dp(25).toFloat()
+        inputBg.setStroke(dp(1), Color.rgb(95, 75, 65))
+        messageInput.background = inputBg
+
+        val sendButton = TextView(this)
         sendButton.text = "➤"
+        sendButton.textSize = 23f
+        sendButton.typeface = Typeface.DEFAULT_BOLD
+        sendButton.setTextColor(Color.WHITE)
+        sendButton.gravity = Gravity.CENTER
 
-        inputLayout.addView(
+        val sendBg = GradientDrawable()
+        sendBg.setColor(red)
+        sendBg.cornerRadius = dp(30).toFloat()
+        sendBg.setStroke(dp(1), gold)
+        sendButton.background = sendBg
+        sendButton.elevation = dp(3).toFloat()
+
+        val sendParams = LinearLayout.LayoutParams(
+            dp(49),
+            dp(49)
+        )
+        sendParams.setMargins(dp(8), 0, 0, 0)
+
+        inputPanel.addView(
             messageInput,
             LinearLayout.LayoutParams(0, -2, 1f)
         )
+        inputPanel.addView(sendButton, sendParams)
 
-        inputLayout.addView(sendButton)
+        page.addView(header)
 
-        layout.addView(header)
-
-        layout.addView(
-            scrollView,
+        page.addView(
+            conversation,
             LinearLayout.LayoutParams(-1, 0, 1f)
         )
 
-        layout.addView(inputLayout)
+        page.addView(inputPanel)
 
-        setContentView(layout)
+        setContentView(page)
 
         // DERGIMI I MESAZHEVE
-        sendButton.setOnClickListener {
+        fun sendMessage() {
             val text = messageInput.text.toString().trim()
             val senderId = auth.currentUser?.uid
 
             if (senderId == null) {
                 toast("Duhet të hysh në llogari")
-                return@setOnClickListener
+                return
             }
 
-            if (text.isEmpty()) return@setOnClickListener
+            if (text.isEmpty()) return
 
             if (text.length > 4000) {
                 toast("Mesazhi është shumë i gjatë")
-                return@setOnClickListener
+                return
             }
 
             val messageData = hashMapOf(
@@ -1348,6 +1448,7 @@ class MainActivity : Activity() {
             )
 
             sendButton.isEnabled = false
+            sendButton.alpha = 0.5f
 
             db.collection("chats")
                 .document(chatId)
@@ -1356,14 +1457,20 @@ class MainActivity : Activity() {
                 .addOnSuccessListener {
                     messageInput.text.clear()
                     sendButton.isEnabled = true
+                    sendButton.alpha = 1f
                 }
                 .addOnFailureListener {
                     sendButton.isEnabled = true
+                    sendButton.alpha = 1f
                     toast("Mesazhi nuk u dërgua: ${it.message}")
                 }
         }
 
-        // MARRJA E MESAZHEVE
+        sendButton.setOnClickListener {
+            sendMessage()
+        }
+
+        // MARRJA E MESAZHEVE NGA FIREBASE
         messagesListener = db.collection("chats")
             .document(chatId)
             .collection("messages")
@@ -1377,51 +1484,129 @@ class MainActivity : Activity() {
 
                 messageList.removeAllViews()
 
-                snapshots?.documents?.forEach { document ->
+                val documents = snapshots?.documents ?: emptyList()
+
+                if (documents.isEmpty()) {
+                    val empty = TextView(this)
+                    empty.text =
+                        "🦅\n\nKjo është biseda juaj e parë.\n" +
+                        "Dërgo një mesazh për të filluar!"
+                    empty.textSize = 15f
+                    empty.gravity = Gravity.CENTER
+                    empty.setTextColor(Color.LTGRAY)
+                    empty.setPadding(
+                        dp(20),
+                        dp(45),
+                        dp(20),
+                        dp(45)
+                    )
+                    messageList.addView(
+                        empty,
+                        LinearLayout.LayoutParams(-1, -2)
+                    )
+                }
+
+                documents.forEach { document ->
                     val senderId =
                         document.getString("senderId") ?: ""
 
                     val text =
                         document.getString("text") ?: ""
 
+                    val createdAt =
+                        document.getLong("createdAt") ?: 0L
+
                     val isMine =
                         senderId == auth.currentUser?.uid
 
-                    val message = TextView(this)
-                    message.text = text
-                    message.textSize = 16f
-                    message.setTextColor(
-                        if (isMine) white else Color.BLACK
-                    )
-                    message.setPadding(
-                        dp(18),
-                        dp(13),
-                        dp(18),
-                        dp(13)
-                    )
-                    message.setBackgroundColor(
-                        if (isMine) red
-                        else Color.rgb(225, 225, 225)
-                    )
-
                     val row = LinearLayout(this)
-                    row.orientation = LinearLayout.HORIZONTAL
+                    row.orientation = LinearLayout.VERTICAL
                     row.gravity =
                         if (isMine) Gravity.END
                         else Gravity.START
 
-                    val params =
+                    val bubble = TextView(this)
+                    bubble.text = text
+                    bubble.textSize = 15.5f
+                    bubble.setTextColor(Color.WHITE)
+                    bubble.setPadding(
+                        dp(15),
+                        dp(11),
+                        dp(15),
+                        dp(11)
+                    )
+                    bubble.maxWidth = dp(285)
+
+                    val bubbleBg = GradientDrawable()
+
+                    if (isMine) {
+                        bubbleBg.setColor(Color.rgb(145, 15, 30))
+                        bubbleBg.setStroke(
+                            dp(1),
+                            Color.rgb(195, 115, 65)
+                        )
+                    } else {
+                        bubbleBg.setColor(Color.rgb(43, 43, 50))
+                        bubbleBg.setStroke(
+                            dp(1),
+                            Color.rgb(85, 75, 65)
+                        )
+                    }
+
+                    bubbleBg.cornerRadius = dp(19).toFloat()
+                    bubble.background = bubbleBg
+                    bubble.elevation = dp(2).toFloat()
+
+                    val bubbleParams =
                         LinearLayout.LayoutParams(-2, -2)
 
-                    params.setMargins(
-                        dp(5),
-                        dp(6),
-                        dp(5),
-                        dp(6)
+                    bubbleParams.setMargins(
+                        dp(3),
+                        dp(3),
+                        dp(3),
+                        dp(2)
                     )
 
-                    row.addView(message, params)
-                    messageList.addView(row)
+                    row.addView(bubble, bubbleParams)
+
+                    // ORA E MESAZHIT
+                    val time = TextView(this)
+
+                    time.text = if (createdAt > 0) {
+                        java.text.SimpleDateFormat(
+                            "HH:mm",
+                            java.util.Locale.getDefault()
+                        ).format(java.util.Date(createdAt))
+                    } else {
+                        ""
+                    }
+
+                    time.textSize = 10f
+                    time.setTextColor(Color.LTGRAY)
+                    time.gravity =
+                        if (isMine) Gravity.END
+                        else Gravity.START
+
+                    time.setPadding(
+                        dp(7),
+                        dp(1),
+                        dp(7),
+                        dp(2)
+                    )
+
+                    row.addView(time)
+
+                    val rowParams =
+                        LinearLayout.LayoutParams(-1, -2)
+
+                    rowParams.setMargins(
+                        0,
+                        dp(3),
+                        0,
+                        dp(3)
+                    )
+
+                    messageList.addView(row, rowParams)
                 }
 
                 scrollView.post {
