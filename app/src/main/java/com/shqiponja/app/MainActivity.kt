@@ -4,6 +4,9 @@ package com.shqiponja.app
 import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
+import android.os.Build
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.view.Gravity
 import android.view.View
@@ -13,6 +16,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
+import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
+import com.zegocloud.uikit.prebuilt.call.invite.widget.ZegoSendCallInvitationButton
+import com.zegocloud.uikit.service.defines.ZegoUIKitUser
 
 class MainActivity : Activity() {
 
@@ -23,8 +30,12 @@ class MainActivity : Activity() {
     private val black = Color.rgb(20, 20, 20)
     private val white = Color.WHITE
 
+    private val zegoResourceId = "shqiponja_call"
+
     private var messagesListener: ListenerRegistration? = null
     private var chatsListener: ListenerRegistration? = null
+
+    private var zegoInitialized = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,10 +44,93 @@ class MainActivity : Activity() {
         db = FirebaseFirestore.getInstance()
 
         if (auth.currentUser != null) {
+            initializeZego()
+            requestCallPermissions()
             showHome()
         } else {
             showLogin()
         }
+    }
+
+    private fun initializeZego() {
+        val user = auth.currentUser ?: return
+
+        if (zegoInitialized) return
+
+        val appId = BuildConfig.ZEGO_APP_ID.toLongOrNull()
+        val appSign = BuildConfig.ZEGO_APP_SIGN
+
+        if (appId == null || appSign.isBlank()) {
+            toast("ZEGO AppID ose AppSign mungon në konfigurimin e APK-së")
+            return
+        }
+
+        val userId = user.uid
+        val userName =
+            user.email?.substringBefore("@")?.lowercase() ?: "user"
+
+        try {
+            val config = ZegoUIKitPrebuiltCallInvitationConfig()
+
+            ZegoUIKitPrebuiltCallService.init(
+                application,
+                appId,
+                appSign,
+                userId,
+                userName,
+                config
+            )
+
+            zegoInitialized = true
+        } catch (e: Exception) {
+            toast("Gabim në inicializimin ZEGO: ${e.message}")
+        }
+    }
+
+    private fun requestCallPermissions() {
+        val permissions = mutableListOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA
+        )
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        val missing = permissions.filter {
+            checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missing.isNotEmpty()) {
+            requestPermissions(
+                missing.toTypedArray(),
+                2001
+            )
+        }
+    }
+
+    private fun createCallButton(
+        otherUserId: String,
+        otherUsername: String,
+        video: Boolean
+    ): View {
+
+        val button = ZegoSendCallInvitationButton(this)
+
+        button.setIsVideoCall(video)
+
+        button.setResourceID(zegoResourceId)
+
+        button.setInvitees(
+            listOf(
+                ZegoUIKitUser(
+                    otherUserId,
+                    otherUsername
+                )
+            )
+        )
+
+        return button
     }
 
     private fun showLogin() {
@@ -107,6 +201,8 @@ class MainActivity : Activity() {
                 .addOnCompleteListener(this) { task ->
                     if (task.isSuccessful) {
                         saveUserProfile()
+                        initializeZego()
+                        requestCallPermissions()
                         showHome()
                     } else {
                         toast("Regjistrimi dështoi: ${task.exception?.message}")
@@ -127,6 +223,8 @@ class MainActivity : Activity() {
                 .addOnCompleteListener(this) { task ->
                     if (task.isSuccessful) {
                         saveUserProfile()
+                        initializeZego()
+                        requestCallPermissions()
                         showHome()
                     } else {
                         toast("Hyrja dështoi: ${task.exception?.message}")
@@ -207,6 +305,16 @@ class MainActivity : Activity() {
         logoutButton.setOnClickListener {
             chatsListener?.remove()
             messagesListener?.remove()
+
+            if (zegoInitialized) {
+                try {
+                    ZegoUIKitPrebuiltCallService.unInit()
+                } catch (e: Exception) {
+                    toast("Gabim gjatë mbylljes së ZEGO-s")
+                }
+                zegoInitialized = false
+            }
+
             auth.signOut()
             showLogin()
         }
@@ -219,7 +327,7 @@ class MainActivity : Activity() {
 
         layout.addView(
             scroll,
-            LinearLayout.LayoutParams( -1, 0, 1f)
+            LinearLayout.LayoutParams(-1, 0, 1f)
         )
 
         layout.addView(logoutButton)
@@ -310,24 +418,21 @@ class MainActivity : Activity() {
                                     val preview = TextView(this)
                                     preview.text = lastMessage
                                     preview.textSize = 15f
-                                    preview.setTextColor(
-                                        Color.LTGRAY
-                                    )
+                                    preview.setTextColor(Color.LTGRAY)
                                     preview.setPadding(0, 7, 0, 0)
 
                                     row.addView(name)
                                     row.addView(preview)
 
                                     val params =
-                                        LinearLayout.LayoutParams(
-                                            -1, -2
-                                        )
+                                        LinearLayout.LayoutParams(-1, -2)
                                     params.setMargins(3, 5, 3, 5)
 
                                     row.setOnClickListener {
                                         showChat(
                                             document.id,
-                                            username
+                                            username,
+                                            otherUid
                                         )
                                     }
 
@@ -452,7 +557,11 @@ class MainActivity : Activity() {
                 com.google.firebase.firestore.SetOptions.merge()
             )
             .addOnSuccessListener {
-                showChat(chatId, otherUsername)
+                showChat(
+                    chatId,
+                    otherUsername,
+                    otherUserId
+                )
             }
             .addOnFailureListener {
                 toast("Gabim: ${it.message}")
@@ -461,7 +570,8 @@ class MainActivity : Activity() {
 
     private fun showChat(
         chatId: String,
-        otherUsername: String
+        otherUsername: String,
+        otherUserId: String
     ) {
         chatsListener?.remove()
         chatsListener = null
@@ -484,6 +594,34 @@ class MainActivity : Activity() {
         header.setOnClickListener {
             showHome()
         }
+
+        // Butonat e telefonatave
+        val callLayout = LinearLayout(this)
+        callLayout.orientation = LinearLayout.HORIZONTAL
+        callLayout.gravity = Gravity.CENTER
+        callLayout.setPadding(8, 8, 8, 8)
+
+        val voiceCall = createCallButton(
+            otherUserId,
+            otherUsername,
+            false
+        )
+
+        val videoCall = createCallButton(
+            otherUserId,
+            otherUsername,
+            true
+        )
+
+        callLayout.addView(
+            voiceCall,
+            LinearLayout.LayoutParams(0, 65, 1f)
+        )
+
+        callLayout.addView(
+            videoCall,
+            LinearLayout.LayoutParams(0, 65, 1f)
+        )
 
         val scrollView = ScrollView(this)
 
@@ -518,6 +656,7 @@ class MainActivity : Activity() {
         inputLayout.addView(sendButton)
 
         layout.addView(header)
+        layout.addView(callLayout)
 
         layout.addView(
             scrollView,
