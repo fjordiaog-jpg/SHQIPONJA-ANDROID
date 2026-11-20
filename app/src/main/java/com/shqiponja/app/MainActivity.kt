@@ -1,3 +1,4 @@
+
 package com.shqiponja.app
 
 import android.app.Activity
@@ -11,14 +12,19 @@ import android.text.InputType
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 
 class MainActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
 
-    private val green = Color.rgb(20, 130, 70)
+    private val red = Color.rgb(190, 20, 35)
+    private val black = Color.rgb(20, 20, 20)
+    private val white = Color.WHITE
+
     private var messagesListener: ListenerRegistration? = null
+    private var chatsListener: ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,27 +44,33 @@ class MainActivity : Activity() {
         layout.orientation = LinearLayout.VERTICAL
         layout.gravity = Gravity.CENTER
         layout.setPadding(35, 35, 35, 35)
-        layout.setBackgroundColor(Color.WHITE)
+        layout.setBackgroundColor(black)
 
         val title = TextView(this)
-        title.text = "🦅 CHAT SHQIPONJA"
-        title.textSize = 28f
-        title.setTextColor(green)
+        title.text = "🦅 SHQIPONJA"
+        title.textSize = 32f
+        title.setTextColor(red)
         title.gravity = Gravity.CENTER
 
         val subtitle = TextView(this)
-        subtitle.text = "Regjistrohu ose hyr në llogarinë tënde"
-        subtitle.textSize = 18f
+        subtitle.text = "Komuniko me të gjithë!"
+        subtitle.textSize = 17f
+        subtitle.setTextColor(white)
         subtitle.gravity = Gravity.CENTER
+        subtitle.setPadding(10, 15, 10, 25)
 
         val emailInput = EditText(this)
         emailInput.hint = "Adresa e emailit"
+        emailInput.setTextColor(white)
+        emailInput.setHintTextColor(Color.LTGRAY)
         emailInput.inputType =
             InputType.TYPE_CLASS_TEXT or
             InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
 
         val passwordInput = EditText(this)
         passwordInput.hint = "Fjalëkalimi"
+        passwordInput.setTextColor(white)
+        passwordInput.setHintTextColor(Color.LTGRAY)
         passwordInput.inputType =
             InputType.TYPE_CLASS_TEXT or
             InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -70,7 +82,7 @@ class MainActivity : Activity() {
         loginButton.text = "HYR NË LLOGARI"
 
         val guestButton = Button(this)
-        guestButton.text = "HYR SI VIZITOR 🦅"
+        guestButton.text = "HYR SI VIZITOR"
 
         layout.addView(title)
         layout.addView(subtitle)
@@ -86,33 +98,20 @@ class MainActivity : Activity() {
             val email = emailInput.text.toString().trim()
             val password = passwordInput.text.toString()
 
-            if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(
-                    this,
-                    "Plotëso emailin dhe fjalëkalimin",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else if (password.length < 6) {
-                Toast.makeText(
-                    this,
-                    "Fjalëkalimi duhet të ketë të paktën 6 karaktere",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
-                auth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this) { task ->
-                        if (task.isSuccessful) {
-                            saveUserProfile()
-                            showHome()
-                        } else {
-                            Toast.makeText(
-                                this,
-                                "Regjistrimi dështoi: ${task.exception?.message}",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
+            if (email.isEmpty() || password.length < 6) {
+                toast("Plotëso emailin dhe fjalëkalimin (minimumi 6 karaktere)")
+                return@setOnClickListener
             }
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this) { task ->
+                    if (task.isSuccessful) {
+                        saveUserProfile()
+                        showHome()
+                    } else {
+                        toast("Regjistrimi dështoi: ${task.exception?.message}")
+                    }
+                }
         }
 
         loginButton.setOnClickListener {
@@ -120,26 +119,19 @@ class MainActivity : Activity() {
             val password = passwordInput.text.toString()
 
             if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(
-                    this,
-                    "Plotëso emailin dhe fjalëkalimin",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
-                auth.signInWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this) { task ->
-                        if (task.isSuccessful) {
-                            saveUserProfile()
-                            showHome()
-                        } else {
-                            Toast.makeText(
-                                this,
-                                "Hyrja dështoi: ${task.exception?.message}",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
+                toast("Plotëso të dhënat")
+                return@setOnClickListener
             }
+
+            auth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this) { task ->
+                    if (task.isSuccessful) {
+                        saveUserProfile()
+                        showHome()
+                    } else {
+                        toast("Hyrja dështoi: ${task.exception?.message}")
+                    }
+                }
         }
 
         guestButton.setOnClickListener {
@@ -151,63 +143,33 @@ class MainActivity : Activity() {
         messagesListener?.remove()
         messagesListener = null
 
+        chatsListener?.remove()
+        chatsListener = null
+
+        val uid = auth.currentUser?.uid
+
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
-        layout.setBackgroundColor(Color.WHITE)
+        layout.setBackgroundColor(black)
 
         val header = TextView(this)
-        header.text = "🦅 CHAT SHQIPONJA"
-        header.textSize = 26f
-        header.setTextColor(Color.WHITE)
-        header.setBackgroundColor(green)
+        header.text = "🦅 SHQIPONJA"
+        header.textSize = 27f
+        header.setTextColor(white)
+        header.setBackgroundColor(red)
         header.gravity = Gravity.CENTER
         header.setPadding(15, 25, 15, 25)
-
-        val subtitle = TextView(this)
-        subtitle.text = "Bisedat e tua"
-        subtitle.textSize = 21f
-        subtitle.setTextColor(Color.BLACK)
-        subtitle.setPadding(20, 20, 20, 10)
 
         val profileButton = Button(this)
         profileButton.text = "PROFILI IM"
 
         profileButton.setOnClickListener {
+            val email = auth.currentUser?.email ?: "Vizitor"
+
             AlertDialog.Builder(this)
                 .setTitle("Profili im 🦅")
-                .setMessage(
-                    "CHAT SHQIPONJA\n\nEmail: ${
-                        auth.currentUser?.email ?: "Vizitor"
-                    }"
-                )
+                .setMessage("SHQIPONJA\n\nEmail: $email")
                 .setPositiveButton("MBYLL", null)
-                .show()
-        }
-
-        val searchButton = Button(this)
-        searchButton.text = "🔎 KËRKO KONTAKT"
-
-        searchButton.setOnClickListener {
-            val input = EditText(this)
-            input.hint = "Shkruaj username"
-
-            AlertDialog.Builder(this)
-                .setTitle("Kërko kontakt")
-                .setView(input)
-                .setPositiveButton("KËRKO") { _, _ ->
-                    val query = input.text.toString().trim()
-
-                    if (query.isNotEmpty()) {
-                        searchUser(query)
-                    } else {
-                        Toast.makeText(
-                            this,
-                            "Shkruaj username",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-                .setNegativeButton("ANULO", null)
                 .show()
         }
 
@@ -215,46 +177,192 @@ class MainActivity : Activity() {
         newChatButton.text = "＋ BISEDË E RE"
 
         newChatButton.setOnClickListener {
-            val input = EditText(this)
-            input.hint = "Username i kontaktit"
-
-            AlertDialog.Builder(this)
-                .setTitle("Bisedë e re")
-                .setView(input)
-                .setPositiveButton("KËRKO") { _, _ ->
-                    val name = input.text.toString().trim()
-                    if (name.isNotEmpty()) {
-                        searchUser(name)
-                    }
-                }
-                .setNegativeButton("ANULO", null)
-                .show()
+            askUsername()
         }
 
-        val chatList = TextView(this)
-        chatList.text = "Nuk ke ende biseda.\nFillo një bisedë të re!"
-        chatList.textSize = 17f
-        chatList.gravity = Gravity.CENTER
-        chatList.setPadding(10, 50, 10, 50)
+        val searchButton = Button(this)
+        searchButton.text = "🔎 KËRKO KONTAKT"
+
+        searchButton.setOnClickListener {
+            askUsername()
+        }
+
+        val subtitle = TextView(this)
+        subtitle.text = "BISEDAT E MIA"
+        subtitle.textSize = 19f
+        subtitle.setTextColor(white)
+        subtitle.setPadding(18, 15, 10, 10)
+
+        val scroll = ScrollView(this)
+
+        val chatList = LinearLayout(this)
+        chatList.orientation = LinearLayout.VERTICAL
+        chatList.setPadding(10, 5, 10, 10)
+
+        scroll.addView(chatList)
 
         val logoutButton = Button(this)
         logoutButton.text = "DIL NGA LLOGARIA"
 
         logoutButton.setOnClickListener {
+            chatsListener?.remove()
             messagesListener?.remove()
             auth.signOut()
             showLogin()
         }
 
         layout.addView(header)
-        layout.addView(subtitle)
         layout.addView(profileButton)
         layout.addView(newChatButton)
         layout.addView(searchButton)
-        layout.addView(chatList)
+        layout.addView(subtitle)
+
+        layout.addView(
+            scroll,
+            LinearLayout.LayoutParams( -1, 0, 1f)
+        )
+
         layout.addView(logoutButton)
 
         setContentView(layout)
+
+        if (uid == null) {
+            val empty = TextView(this)
+            empty.text = "Hyr në llogari për të përdorur bisedat."
+            empty.setTextColor(white)
+            empty.gravity = Gravity.CENTER
+            chatList.addView(empty)
+            return
+        }
+
+        chatList.addView(makeLabel("Po ngarkohen bisedat..."))
+
+        chatsListener = db.collection("chats")
+            .whereArrayContains("participants", uid)
+            .addSnapshotListener { snapshots, error ->
+
+                if (error != null) {
+                    toast("Gabim: ${error.message}")
+                    return@addSnapshotListener
+                }
+
+                chatList.removeAllViews()
+
+                val documents = snapshots?.documents ?: emptyList()
+
+                if (documents.isEmpty()) {
+                    chatList.addView(
+                        makeLabel(
+                            "Nuk ke ende biseda.\n\nShtyp BISEDË E RE për të filluar! 🦅"
+                        )
+                    )
+                    return@addSnapshotListener
+                }
+
+                documents.forEach { document ->
+
+                    val participants =
+                        document.get("participants") as? List<*>
+                            ?: emptyList<Any>()
+
+                    val otherUid = participants
+                        .filterIsInstance<String>()
+                        .firstOrNull { it != uid }
+                        ?: return@forEach
+
+                    db.collection("users")
+                        .document(otherUid)
+                        .get()
+                        .addOnSuccessListener { userDocument ->
+
+                            val username =
+                                userDocument.getString("username")
+                                    ?: "Përdorues"
+
+                            db.collection("chats")
+                                .document(document.id)
+                                .collection("messages")
+                                .orderBy(
+                                    "createdAt",
+                                    Query.Direction.DESCENDING
+                                )
+                                .limit(1)
+                                .get()
+                                .addOnSuccessListener { messages ->
+
+                                    val lastMessage =
+                                        messages.documents.firstOrNull()
+                                            ?.getString("text")
+                                            ?: "Fillo bisedën"
+
+                                    val row = LinearLayout(this)
+                                    row.orientation = LinearLayout.VERTICAL
+                                    row.setPadding(16, 15, 16, 15)
+                                    row.setBackgroundColor(
+                                        Color.rgb(38, 38, 38)
+                                    )
+
+                                    val name = TextView(this)
+                                    name.text = "🦅 @$username"
+                                    name.textSize = 19f
+                                    name.setTextColor(white)
+
+                                    val preview = TextView(this)
+                                    preview.text = lastMessage
+                                    preview.textSize = 15f
+                                    preview.setTextColor(
+                                        Color.LTGRAY
+                                    )
+                                    preview.setPadding(0, 7, 0, 0)
+
+                                    row.addView(name)
+                                    row.addView(preview)
+
+                                    val params =
+                                        LinearLayout.LayoutParams(
+                                            -1, -2
+                                        )
+                                    params.setMargins(3, 5, 3, 5)
+
+                                    row.setOnClickListener {
+                                        showChat(
+                                            document.id,
+                                            username
+                                        )
+                                    }
+
+                                    chatList.addView(row, params)
+                                }
+                        }
+                }
+            }
+    }
+
+    private fun makeLabel(text: String): TextView {
+        val label = TextView(this)
+        label.text = text
+        label.textSize = 17f
+        label.setTextColor(white)
+        label.gravity = Gravity.CENTER
+        label.setPadding(15, 45, 15, 45)
+        return label
+    }
+
+    private fun askUsername() {
+        val input = EditText(this)
+        input.hint = "Username i kontaktit"
+
+        AlertDialog.Builder(this)
+            .setTitle("Kërko kontakt 🦅")
+            .setView(input)
+            .setPositiveButton("KËRKO") { _, _ ->
+                val query = input.text.toString().trim()
+                if (query.isNotEmpty()) {
+                    searchUser(query)
+                }
+            }
+            .setNegativeButton("ANULO", null)
+            .show()
     }
 
     private fun saveUserProfile() {
@@ -263,7 +371,8 @@ class MainActivity : Activity() {
         val userData = hashMapOf(
             "uid" to user.uid,
             "username" to (
-                user.email?.substringBefore("@")?.lowercase() ?: "user"
+                user.email?.substringBefore("@")?.lowercase()
+                    ?: "user"
             ),
             "createdAt" to System.currentTimeMillis()
         )
@@ -277,11 +386,7 @@ class MainActivity : Activity() {
         val currentUid = auth.currentUser?.uid
 
         if (currentUid == null) {
-            Toast.makeText(
-                this,
-                "Duhet të hysh në llogari",
-                Toast.LENGTH_SHORT
-            ).show()
+            toast("Duhet të hysh në llogari")
             return
         }
 
@@ -308,8 +413,8 @@ class MainActivity : Activity() {
                         user.getString("username") ?: "Përdorues"
 
                     AlertDialog.Builder(this)
-                        .setTitle("Përdoruesi u gjet! 🦅")
-                        .setMessage("Username: @$foundUsername")
+                        .setTitle("U gjet përdoruesi! 🦅")
+                        .setMessage("@$foundUsername")
                         .setPositiveButton("HAP BISEDË") { _, _ ->
                             openChat(user.id, foundUsername)
                         }
@@ -318,11 +423,7 @@ class MainActivity : Activity() {
                 }
             }
             .addOnFailureListener {
-                Toast.makeText(
-                    this,
-                    "Gabim gjatë kërkimit: ${it.message}",
-                    Toast.LENGTH_LONG
-                ).show()
+                toast("Gabim: ${it.message}")
             }
     }
 
@@ -354,11 +455,7 @@ class MainActivity : Activity() {
                 showChat(chatId, otherUsername)
             }
             .addOnFailureListener {
-                Toast.makeText(
-                    this,
-                    "Gabim: ${it.message}",
-                    Toast.LENGTH_LONG
-                ).show()
+                toast("Gabim: ${it.message}")
             }
     }
 
@@ -366,22 +463,25 @@ class MainActivity : Activity() {
         chatId: String,
         otherUsername: String
     ) {
+        chatsListener?.remove()
+        chatsListener = null
+
         messagesListener?.remove()
+        messagesListener = null
 
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
-        layout.setBackgroundColor(Color.WHITE)
+        layout.setBackgroundColor(black)
 
         val header = TextView(this)
-        header.text = "‹   @$otherUsername"
+        header.text = "‹    @$otherUsername"
         header.textSize = 22f
-        header.setTextColor(Color.WHITE)
-        header.setBackgroundColor(green)
+        header.setTextColor(white)
+        header.setBackgroundColor(red)
         header.gravity = Gravity.CENTER_VERTICAL
         header.setPadding(20, 22, 20, 22)
 
         header.setOnClickListener {
-            messagesListener?.remove()
             showHome()
         }
 
@@ -400,13 +500,15 @@ class MainActivity : Activity() {
 
         val messageInput = EditText(this)
         messageInput.hint = "Shkruaj mesazhin..."
+        messageInput.setTextColor(white)
+        messageInput.setHintTextColor(Color.LTGRAY)
         messageInput.inputType =
             InputType.TYPE_CLASS_TEXT or
             InputType.TYPE_TEXT_FLAG_MULTI_LINE
         messageInput.maxLines = 3
 
         val sendButton = Button(this)
-        sendButton.text = "DËRGO"
+        sendButton.text = "➤"
 
         inputLayout.addView(
             messageInput,
@@ -419,11 +521,7 @@ class MainActivity : Activity() {
 
         layout.addView(
             scrollView,
-            LinearLayout.LayoutParams(
-                -1,
-                0,
-                1f
-            )
+            LinearLayout.LayoutParams(-1, 0, 1f)
         )
 
         layout.addView(inputLayout)
@@ -435,24 +533,14 @@ class MainActivity : Activity() {
             val senderId = auth.currentUser?.uid
 
             if (senderId == null) {
-                Toast.makeText(
-                    this,
-                    "Duhet të hysh në llogari",
-                    Toast.LENGTH_SHORT
-                ).show()
+                toast("Duhet të hysh në llogari")
                 return@setOnClickListener
             }
 
-            if (text.isEmpty()) {
-                return@setOnClickListener
-            }
+            if (text.isEmpty()) return@setOnClickListener
 
             if (text.length > 4000) {
-                Toast.makeText(
-                    this,
-                    "Mesazhi është shumë i gjatë",
-                    Toast.LENGTH_SHORT
-                ).show()
+                toast("Mesazhi është shumë i gjatë")
                 return@setOnClickListener
             }
 
@@ -474,12 +562,7 @@ class MainActivity : Activity() {
                 }
                 .addOnFailureListener {
                     sendButton.isEnabled = true
-
-                    Toast.makeText(
-                        this,
-                        "Mesazhi nuk u dërgua: ${it.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    toast("Mesazhi nuk u dërgua: ${it.message}")
                 }
         }
 
@@ -490,11 +573,7 @@ class MainActivity : Activity() {
             .addSnapshotListener { snapshots, error ->
 
                 if (error != null) {
-                    Toast.makeText(
-                        this,
-                        "Gabim gjatë marrjes së mesazheve: ${error.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    toast("Gabim: ${error.message}")
                     return@addSnapshotListener
                 }
 
@@ -508,32 +587,29 @@ class MainActivity : Activity() {
                     val text =
                         document.getString("text") ?: ""
 
+                    val isMine =
+                        senderId == auth.currentUser?.uid
+
                     val message = TextView(this)
                     message.text = text
-                    message.textSize = 17f
-                    message.setTextColor(Color.BLACK)
-                    message.setPadding(18, 12, 18, 12)
+                    message.textSize = 16f
+                    message.setTextColor(
+                        if (isMine) white else Color.BLACK
+                    )
+                    message.setPadding(18, 13, 18, 13)
                     message.setBackgroundColor(
-                        if (senderId == auth.currentUser?.uid) {
-                            Color.rgb(210, 245, 220)
-                        } else {
-                            Color.rgb(235, 235, 235)
-                        }
+                        if (isMine) red
+                        else Color.rgb(225, 225, 225)
                     )
 
                     val row = LinearLayout(this)
                     row.orientation = LinearLayout.HORIZONTAL
                     row.gravity =
-                        if (senderId == auth.currentUser?.uid) {
-                            Gravity.END
-                        } else {
-                            Gravity.START
-                        }
+                        if (isMine) Gravity.END
+                        else Gravity.START
 
-                    val params = LinearLayout.LayoutParams(
-                        -2,
-                        -2
-                    )
+                    val params =
+                        LinearLayout.LayoutParams(-2, -2)
 
                     params.setMargins(5, 6, 5, 6)
 
@@ -547,9 +623,19 @@ class MainActivity : Activity() {
             }
     }
 
+    private fun toast(message: String) {
+        Toast.makeText(
+            this,
+            message,
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
     override fun onDestroy() {
         messagesListener?.remove()
+        chatsListener?.remove()
         messagesListener = null
+        chatsListener = null
         super.onDestroy()
     }
 }
