@@ -7,6 +7,9 @@ import android.os.Bundle
 import android.os.Build
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.ClipboardManager
+import android.content.ClipData
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -41,8 +44,90 @@ class MainActivity : Activity() {
     private var zegoInitialized = false
     private var zegoInitializing = false
 
+    // REGJISTRON GABIMET QE MBYLLIN APLIKACIONIN
+    private fun installCrashLogger() {
+        val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
+
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                val crashFile = java.io.File(filesDir, "last_crash.txt")
+
+                crashFile.writeText(
+                    "CHAT SHQIPONJA - GABIM I REGJISTRUAR\n" +
+                    "Koha: ${java.util.Date()}\n" +
+                    "Thread: ${thread.name}\n\n" +
+                    android.util.Log.getStackTraceString(throwable)
+                )
+            } catch (_: Throwable) {
+                // Mos lejo qe regjistrimi i gabimit te shkaktoje gabim tjeter.
+            }
+
+            if (previousHandler != null) {
+                previousHandler.uncaughtException(thread, throwable)
+            } else {
+                android.os.Process.killProcess(android.os.Process.myPid())
+                kotlin.system.exitProcess(10)
+            }
+        }
+    }
+
+    // SHFAQ GABIMIN E RUAJTUR KUR APLIKACIONI HAPET PERSERI
+    private fun showSavedCrashIfAny() {
+        try {
+            val crashFile = java.io.File(filesDir, "last_crash.txt")
+
+            if (!crashFile.exists()) return
+
+            val crashText = crashFile.readText()
+
+            if (crashText.isBlank()) return
+
+            val textView = TextView(this)
+            textView.text = crashText
+            textView.textSize = 13f
+            textView.setTextIsSelectable(true)
+            textView.setPadding(20, 15, 20, 15)
+
+            val scrollView = ScrollView(this)
+            scrollView.addView(textView)
+
+            AlertDialog.Builder(this)
+                .setTitle("U regjistrua një gabim")
+                .setMessage(
+                    "Aplikacioni u mbyll nga një gabim. " +
+                    "Shtyp KOPJO dhe ma dërgo tekstin."
+                )
+                .setView(scrollView)
+                .setPositiveButton("KOPJO") { _, _ ->
+                    try {
+                        val clipboard =
+                            getSystemService(Context.CLIPBOARD_SERVICE)
+                                as ClipboardManager
+
+                        clipboard.setPrimaryClip(
+                            ClipData.newPlainText(
+                                "CHAT SHQIPONJA CRASH",
+                                crashText
+                            )
+                        )
+
+                        toast("Gabimi u kopjua. Ma dërgo tekstin.")
+                    } catch (e: Throwable) {
+                        toast("Nuk u kopjua gabimi.")
+                    }
+                }
+                .setNegativeButton("MBYLL", null)
+                .show()
+
+        } catch (e: Throwable) {
+            // Mos pengo hapjen normale te aplikacionit.
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        installCrashLogger()
 
         try {
             auth = FirebaseAuth.getInstance()
@@ -53,6 +138,11 @@ class MainActivity : Activity() {
             } else {
                 showLogin()
             }
+
+            window.decorView.post {
+                showSavedCrashIfAny()
+            }
+
         } catch (e: Throwable) {
             Toast.makeText(
                 this,
@@ -100,6 +190,7 @@ class MainActivity : Activity() {
             )
 
             zegoInitialized = true
+
         } catch (e: Throwable) {
             toast("Gabim ZEGO: ${e.message}")
         } finally {
@@ -146,7 +237,6 @@ class MainActivity : Activity() {
             )
         )
 
-        // Pamja e re e butonit ZEGO
         button.text = if (video) {
             "📹  VIDEO"
         } else {
@@ -614,7 +704,6 @@ class MainActivity : Activity() {
         header.setPadding(20, 22, 20, 22)
         header.setOnClickListener { showHome() }
 
-        // Shiriti i ri i telefonatave
         val callLayout = LinearLayout(this)
         callLayout.orientation = LinearLayout.HORIZONTAL
         callLayout.gravity = Gravity.CENTER
