@@ -55,7 +55,6 @@ class MainActivity : Activity() {
     private var zegoInitializing = false
     private var selectedHomeTab = "chats"
 
-    // VOICE
     private var mediaRecorder: MediaRecorder? = null
     private var recordingFile: File? = null
     private var recordingChatId: String? = null
@@ -63,10 +62,7 @@ class MainActivity : Activity() {
     private var activeVoiceButton: TextView? = null
     private var isRecording = false
 
-    // AUDIO PLAYER
     private var mediaPlayer: MediaPlayer? = null
-
-    // FOTO / VIDEO
     private var pendingUploadChatId: String? = null
 
     private fun installCrashLogger() {
@@ -618,6 +614,7 @@ class MainActivity : Activity() {
             .show()
     }
 
+    // FAQJA E BISEDAVE ME BUTONIN E RI PLUS
     private fun showChatsPage(content: FrameLayout, uid: String?) {
         val density = resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
@@ -628,28 +625,40 @@ class MainActivity : Activity() {
 
         val actions = LinearLayout(this)
         actions.orientation = LinearLayout.HORIZONTAL
-        actions.gravity = Gravity.CENTER
-        actions.setPadding(dp(8), dp(5), dp(8), dp(5))
-
-        val newChatButton = Button(this)
-        newChatButton.text = "＋ BISEDË E RE"
-        newChatButton.isAllCaps = false
-        newChatButton.setOnClickListener { askUsername() }
-
-        val searchButton = Button(this)
-        searchButton.text = "🔎 KËRKO"
-        searchButton.isAllCaps = false
-        searchButton.setOnClickListener { askUsername() }
-
-        actions.addView(newChatButton, LinearLayout.LayoutParams(0, -2, 1f))
-        actions.addView(searchButton, LinearLayout.LayoutParams(0, -2, 1f))
+        actions.gravity = Gravity.CENTER_VERTICAL
+        actions.setPadding(dp(14), dp(8), dp(14), dp(8))
 
         val subtitle = TextView(this)
         subtitle.text = "BISEDAT E MIA"
         subtitle.textSize = 17f
         subtitle.typeface = Typeface.DEFAULT_BOLD
         subtitle.setTextColor(white)
-        subtitle.setPadding(dp(16), dp(12), dp(10), dp(8))
+        subtitle.gravity = Gravity.CENTER_VERTICAL
+
+        actions.addView(
+            subtitle,
+            LinearLayout.LayoutParams(0, dp(48), 1f)
+        )
+
+        // BUTON RRETHOR JESHiL, PLUS I ZI
+        val plusButton = TextView(this)
+        plusButton.text = "+"
+        plusButton.textSize = 29f
+        plusButton.typeface = Typeface.DEFAULT_BOLD
+        plusButton.setTextColor(Color.BLACK)
+        plusButton.gravity = Gravity.CENTER
+
+        val plusBackground = GradientDrawable()
+        plusBackground.shape = GradientDrawable.OVAL
+        plusBackground.setColor(Color.rgb(32, 184, 90))
+        plusButton.background = plusBackground
+        plusButton.elevation = dp(4).toFloat()
+        plusButton.setOnClickListener {
+            askUsername()
+        }
+
+        val plusParams = LinearLayout.LayoutParams(dp(42), dp(42))
+        actions.addView(plusButton, plusParams)
 
         val scroll = ScrollView(this)
         val chatList = LinearLayout(this)
@@ -658,7 +667,6 @@ class MainActivity : Activity() {
         scroll.addView(chatList)
 
         page.addView(actions)
-        page.addView(subtitle)
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         content.addView(page, FrameLayout.LayoutParams(-1, -1))
 
@@ -683,7 +691,7 @@ class MainActivity : Activity() {
 
                 if (documents.isEmpty()) {
                     chatList.addView(
-                        makeLabel("Nuk ke ende biseda.\n\nShtyp BISEDË E RE për të filluar! 🦅")
+                        makeLabel("Nuk ke ende biseda.\n\nShtyp + për të kërkuar kontakte! 🦅")
                     )
                     return@addSnapshotListener
                 }
@@ -962,10 +970,7 @@ class MainActivity : Activity() {
             }
     }
 
-    // ==========================================
     // FAQJA E BISEDES
-    // ==========================================
-
     private fun showChat(
         chatId: String,
         otherUsername: String,
@@ -1112,7 +1117,6 @@ class MainActivity : Activity() {
         scrollView.addView(messageList, FrameLayout.LayoutParams(-1, -2))
         conversation.addView(scrollView, FrameLayout.LayoutParams(-1, -1))
 
-        // FUSHA E MESAZHIT
         val inputPanel = LinearLayout(this)
         inputPanel.orientation = LinearLayout.HORIZONTAL
         inputPanel.gravity = Gravity.CENTER_VERTICAL
@@ -1202,7 +1206,6 @@ class MainActivity : Activity() {
             popup.show()
         }
 
-        // FILLIM / NDALIM I REGJISTRIMIT ZANOR
         voiceButton.setOnClickListener {
             if (isRecording) {
                 stopRecording(true)
@@ -1211,7 +1214,6 @@ class MainActivity : Activity() {
             }
         }
 
-        // ZGJEDH FOTO OSE VIDEO
         uploadButton.setOnClickListener {
             openMediaPicker(chatId)
         }
@@ -1269,7 +1271,6 @@ class MainActivity : Activity() {
             true
         }
 
-        // MARRJA DHE SHFAQJA E MESAZHEVE
         messagesListener = db.collection("chats")
             .document(chatId)
             .collection("messages")
@@ -1414,10 +1415,7 @@ class MainActivity : Activity() {
             }
     }
 
-    // ==========================================
     // REGJISTRIMI I MESAZHIT ZANOR
-    // ==========================================
-
     private fun startVoiceRecording(chatId: String, button: TextView) {
         val user = auth.currentUser
         if (user == null) {
@@ -1562,10 +1560,7 @@ class MainActivity : Activity() {
             }
     }
 
-    // ==========================================
     // LUAJTJA E MESAZHIT ZANOR
-    // ==========================================
-
     private fun playAudio(url: String) {
         releasePlayer()
 
@@ -1605,10 +1600,7 @@ class MainActivity : Activity() {
         mediaPlayer = null
     }
 
-    // ==========================================
     // ZGJEDHJA E FOTOVE DHE VIDEOVE
-    // ==========================================
-
     private fun openMediaPicker(chatId: String) {
         try {
             pendingUploadChatId = chatId
@@ -1705,10 +1697,7 @@ class MainActivity : Activity() {
             }
     }
 
-    // ==========================================
     // SHFAQJA E FOTOS DHE VIDEOS
-    // ==========================================
-
     private fun loadImage(url: String, imageView: ImageView) {
         Thread {
             try {
@@ -1750,10 +1739,7 @@ class MainActivity : Activity() {
         }
     }
 
-    // ==========================================
     // LEJET E MIKROFONIT
-    // ==========================================
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
