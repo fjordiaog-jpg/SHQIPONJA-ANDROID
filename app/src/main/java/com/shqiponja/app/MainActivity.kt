@@ -8,6 +8,8 @@ import android.os.Build
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -29,6 +31,7 @@ class MainActivity : Activity() {
     private val red = Color.rgb(190, 20, 35)
     private val black = Color.rgb(20, 20, 20)
     private val white = Color.WHITE
+    private val green = Color.rgb(20, 155, 85)
 
     private val zegoResourceId = "shqiponja_call"
 
@@ -142,6 +145,28 @@ class MainActivity : Activity() {
                 )
             )
         )
+
+        // Pamja e re e butonit ZEGO
+        button.text = if (video) {
+            "📹  VIDEO"
+        } else {
+            "📞  TELEFONO"
+        }
+
+        button.textSize = 15f
+        button.setTextColor(Color.WHITE)
+        button.typeface = Typeface.DEFAULT_BOLD
+        button.gravity = Gravity.CENTER
+        button.isAllCaps = false
+        button.setPadding(10, 8, 10, 8)
+
+        val background = GradientDrawable()
+        background.setColor(green)
+        background.cornerRadius = 22f
+
+        button.background = background
+        button.elevation = 5f
+        button.minimumHeight = 58
 
         return button
     }
@@ -325,10 +350,12 @@ class MainActivity : Activity() {
         layout.addView(newChatButton)
         layout.addView(searchButton)
         layout.addView(subtitle)
+
         layout.addView(
             scroll,
             LinearLayout.LayoutParams(-1, 0, 1f)
         )
+
         layout.addView(logoutButton)
 
         setContentView(layout)
@@ -587,10 +614,12 @@ class MainActivity : Activity() {
         header.setPadding(20, 22, 20, 22)
         header.setOnClickListener { showHome() }
 
+        // Shiriti i ri i telefonatave
         val callLayout = LinearLayout(this)
         callLayout.orientation = LinearLayout.HORIZONTAL
         callLayout.gravity = Gravity.CENTER
-        callLayout.setPadding(8, 8, 8, 8)
+        callLayout.setPadding(10, 12, 10, 12)
+        callLayout.setBackgroundColor(Color.rgb(28, 28, 28))
 
         val voiceCall = createCallButton(
             otherUserId,
@@ -604,15 +633,22 @@ class MainActivity : Activity() {
             true
         )
 
-        callLayout.addView(
-            voiceCall,
-            LinearLayout.LayoutParams(0, 65, 1f)
+        val voiceParams = LinearLayout.LayoutParams(
+            0,
+            58,
+            1f
         )
+        voiceParams.setMargins(5, 0, 8, 0)
 
-        callLayout.addView(
-            videoCall,
-            LinearLayout.LayoutParams(0, 65, 1f)
+        val videoParams = LinearLayout.LayoutParams(
+            0,
+            58,
+            1f
         )
+        videoParams.setMargins(8, 0, 5, 0)
+
+        callLayout.addView(voiceCall, voiceParams)
+        callLayout.addView(videoCall, videoParams)
 
         val scrollView = ScrollView(this)
 
@@ -646,10 +682,12 @@ class MainActivity : Activity() {
 
         layout.addView(header)
         layout.addView(callLayout)
+
         layout.addView(
             scrollView,
             LinearLayout.LayoutParams(-1, 0, 1f)
         )
+
         layout.addView(inputLayout)
 
         setContentView(layout)
