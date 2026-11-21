@@ -1,5 +1,6 @@
 package com.shqiponja.app
-
+import android.provider.MediaStore
+import android.graphics.Bitmap
 import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
@@ -35,7 +36,13 @@ import java.io.File
 import java.util.UUID
 
 class MainActivity : Activity() {
+private val PICK_PROFILE_IMAGE = 1001
 
+private fun chooseProfilePhoto() {
+    val intent = Intent(Intent.ACTION_GET_CONTENT)
+    intent.type = "image/*"
+    startActivityForResult(intent, PICK_PROFILE_IMAGE)
+}
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
     private val storage by lazy { FirebaseStorage.getInstance() }
