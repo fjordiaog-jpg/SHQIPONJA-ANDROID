@@ -2492,26 +2492,76 @@ private fun uploadStatus(uri: Uri, mimeType: String) {
         }
 }
 
+
+     
 private fun showStatusesPage(content: FrameLayout, uid: String?) {
     content.removeAllViews()
 
-    val layout = LinearLayout(this)
-    layout.orientation = LinearLayout.VERTICAL
-    layout.setPadding(20, 20, 20, 20)
-    layout.setBackgroundColor(pageBackground)
+    val density = resources.displayMetrics.density
+    fun dp(value: Int) = (value * density).toInt()
 
-    val title = TextView(this)
-    title.text = "Përditësimet"
-    title.textSize = 23f
-    title.setTypeface(null, Typeface.BOLD)
-    title.setTextColor(black)
-    layout.addView(title)
+    val primaryText = if (isLightTheme) black else white
 
-    val addButton = Button(this)
-    addButton.text = "＋ Shto foto ose video në status"
-    layout.addView(addButton)
+    val page = LinearLayout(this)
+    page.orientation = LinearLayout.VERTICAL
+    page.setPadding(dp(16), dp(18), dp(16), dp(12))
+    page.setBackgroundColor(pageBackground)
 
-    addButton.setOnClickListener {
+    fun makeText(
+        value: String,
+        size: Float,
+        color: Int,
+        bold: Boolean = false
+    ): TextView {
+        return TextView(this).apply {
+            text = value
+            textSize = size
+            setTextColor(color)
+            if (bold) setTypeface(null, Typeface.BOLD)
+        }
+    }
+
+    // TITULLI
+    val title = makeText(
+        "Përditësimet",
+        25f,
+        primaryText,
+        true
+    )
+    page.addView(title)
+
+    val description = makeText(
+        "Ndaj foto dhe video me kontaktet e tua",
+        14f,
+        secondaryText
+    )
+    description.setPadding(0, dp(5), 0, dp(20))
+    page.addView(description)
+
+    // LISTA
+    val scroll = ScrollView(this)
+    val list = LinearLayout(this)
+    list.orientation = LinearLayout.VERTICAL
+    scroll.addView(list)
+
+    page.addView(
+        scroll,
+        LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            0,
+            1f
+        )
+    )
+
+    content.addView(
+        page,
+        FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        )
+    )
+
+    fun openPicker() {
         val intent = Intent(Intent.ACTION_GET_CONTENT)
         intent.type = "*/*"
         intent.putExtra(
@@ -2521,41 +2571,114 @@ private fun showStatusesPage(content: FrameLayout, uid: String?) {
         startActivityForResult(intent, 3002)
     }
 
-    val subtitle = TextView(this)
-    subtitle.text = "Statuset e fundit"
-    subtitle.textSize = 18f
-    subtitle.setTextColor(black)
-    subtitle.setPadding(0, 25, 0, 12)
-    layout.addView(subtitle)
+    fun openStatus(url: String, type: String) {
+        try {
+            val intent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(url)
+            )
+            intent.setDataAndType(
+                Uri.parse(url),
+                if (type == "image") "image/*" else "video/*"
+            )
+            startActivity(intent)
+        } catch (_: Exception) {
+            toast("Nuk u hap statusi.")
+        }
+    }
 
-    val scrollView = ScrollView(this)
-    val statusList = LinearLayout(this)
-    statusList.orientation = LinearLayout.VERTICAL
-
-    scrollView.addView(statusList)
-
-    layout.addView(
-        scrollView,
-        LinearLayout.LayoutParams(
+    fun addDivider() {
+        val line = View(this)
+        line.setBackgroundColor(
+            if (isLightTheme) Color.LTGRAY else Color.DKGRAY
+        )
+        val params = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            0,
-            1f
+            dp(1)
         )
-    )
+        params.setMargins(dp(72), dp(10), 0, dp(10))
+        list.addView(line, params)
+    }
 
-    content.addView(
-        layout,
-        FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
+    fun addStatusRow(
+        name: String,
+        subtitle: String,
+        own: Boolean,
+        hasStatus: Boolean,
+        onClick: () -> Unit
+    ) {
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = android.view.Gravity.CENTER_VERTICAL
+        row.setPadding(dp(4), dp(10), dp(4), dp(10))
+        row.background = GradientDrawable().apply {
+            setColor(cardBackground)
+            cornerRadius = dp(14).toFloat()
+        }
+
+        val avatar = TextView(this)
+        avatar.text = if (own) "＋" else "S"
+        avatar.textSize = if (own) 30f else 23f
+        avatar.gravity = android.view.Gravity.CENTER
+        avatar.setTextColor(Color.WHITE)
+        avatar.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(if (own) green else red)
+            setStroke(
+                dp(3),
+                if (hasStatus) gold else secondaryText
+            )
+        }
+
+        row.addView(
+            avatar,
+            LinearLayout.LayoutParams(dp(54), dp(54))
         )
+
+        val texts = LinearLayout(this)
+        texts.orientation = LinearLayout.VERTICAL
+        texts.setPadding(dp(14), 0, 0, 0)
+
+        val nameView = makeText(name, 16f, primaryText, true)
+        val subtitleView = makeText(subtitle, 13f, secondaryText)
+
+        texts.addView(nameView)
+        texts.addView(subtitleView)
+
+        row.addView(
+            texts,
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        )
+
+        row.setOnClickListener { onClick() }
+
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        params.bottomMargin = dp(5)
+        list.addView(row, params)
+    }
+
+    // STATUSI IM
+    val myTitle = makeText(
+        "Statusi im",
+        17f,
+        primaryText,
+        true
     )
+    myTitle.setPadding(0, dp(5), 0, dp(8))
+    list.addView(myTitle)
 
     db.collection("statuses")
         .get()
         .addOnSuccessListener { documents ->
 
-            statusList.removeAllViews()
+            list.removeAllViews()
 
             val now = System.currentTimeMillis()
 
@@ -2567,56 +2690,77 @@ private fun showStatusesPage(content: FrameLayout, uid: String?) {
                     it.getLong("createdAt") ?: 0L
                 }
 
-            if (activeStatuses.isEmpty()) {
-                val emptyText = TextView(this)
-                emptyText.text = "Nuk ka ende statuse."
-                emptyText.textSize = 16f
-                emptyText.setTextColor(black)
-                statusList.addView(emptyText)
+            val myStatus = activeStatuses.firstOrNull {
+                it.getString("userId") == uid
             }
 
-            for (document in activeStatuses) {
-                val ownerId = document.getString("userId") ?: ""
-                val mediaUrl = document.getString("mediaUrl") ?: ""
-                val type = document.getString("type") ?: "image"
-
-                val item = TextView(this)
-
-                val ownerName = if (ownerId == uid) {
-                    "Statusi yt"
+            addStatusRow(
+                "Statusi im",
+                if (myStatus != null)
+                    "Prek për të parë statusin tënd"
+                else
+                    "Prek për të shtuar një status",
+                true,
+                myStatus != null
+            ) {
+                if (myStatus != null) {
+                    openStatus(
+                        myStatus.getString("mediaUrl") ?: "",
+                        myStatus.getString("type") ?: "image"
+                    )
                 } else {
-                    "Status i përdoruesit"
+                    openPicker()
+                }
+            }
+
+            addDivider()
+
+            val recentTitle = makeText(
+                "Përditësimet e fundit",
+                17f,
+                primaryText,
+                true
+            )
+            recentTitle.setPadding(0, dp(8), 0, dp(12))
+            list.addView(recentTitle)
+
+            val groupedStatuses = activeStatuses
+                .filter {
+                    it.getString("userId") != uid
+                }
+                .groupBy {
+                    it.getString("userId") ?: ""
+                }
+                .values
+                .mapNotNull { it.firstOrNull() }
+                .sortedByDescending {
+                    it.getLong("createdAt") ?: 0L
                 }
 
-                val mediaName = if (type == "image") {
-                    "📷 Foto"
-                } else {
-                    "🎥 Video"
-                }
+            if (groupedStatuses.isEmpty()) {
+                val empty = makeText(
+                    "Nuk ka përditësime të reja.",
+                    14f,
+                    secondaryText
+                )
+                empty.setPadding(dp(5), dp(15), 0, dp(15))
+                list.addView(empty)
+            }
 
-                item.text = "$ownerName\n$mediaName\nHap statusin"
-                item.textSize = 17f
-                item.setTextColor(black)
-                item.setPadding(18, 20, 18, 20)
+            groupedStatuses.forEach { document ->
+                val mediaUrl =
+                    document.getString("mediaUrl") ?: ""
+                val type =
+                    document.getString("type") ?: "image"
 
-                statusList.addView(item)
-
-                item.setOnClickListener {
-                    if (mediaUrl.isNotEmpty()) {
-                        try {
-                            val viewIntent = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse(mediaUrl)
-                            )
-                            viewIntent.setDataAndType(
-                                Uri.parse(mediaUrl),
-                                if (type == "image") "image/*" else "video/*"
-                            )
-                            startActivity(viewIntent)
-                        } catch (_: Exception) {
-                            toast("Nuk u hap statusi.")
-                        }
-                    }
+                addStatusRow(
+                    "Status i përdoruesit",
+                    if (type == "image") "📷 Foto"
+                    else "🎥 Video",
+                    false,
+                    true
+                ) {
+                    openStatus(mediaUrl, type)
                 }
             }
         }
@@ -2624,6 +2768,7 @@ private fun showStatusesPage(content: FrameLayout, uid: String?) {
             toast("Nuk u ngarkuan statuset: ${it.message}")
         }
 }
+
 
     // SHFAQJA E FOTOS DHE VIDEOS
     private fun loadImage(url: String, imageView: ImageView) {
