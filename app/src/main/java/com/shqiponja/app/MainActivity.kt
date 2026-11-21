@@ -1150,20 +1150,27 @@ private fun showChatsPage(content: FrameLayout, uid: String?) {
                                 row.setPadding(dp(12), dp(12), dp(12), dp(12))
                                 row.setBackgroundColor(Color.WHITE)
 
-                                val avatar = TextView(this)
-                                avatar.text = "🦅"
-                                avatar.textSize = 27f
-                                avatar.gravity = Gravity.CENTER
+                                val avatar = ImageView(this)
+avatar.scaleType = ImageView.ScaleType.CENTER_CROP
+avatar.setImageResource(android.R.drawable.ic_menu_myplaces)
 
-                                val avatarBackground = GradientDrawable()
-                                avatarBackground.shape = GradientDrawable.OVAL
-                                avatarBackground.setColor(Color.rgb(110, 15, 25))
-                                avatarBackground.setStroke(dp(2), gold)
-                                avatar.background = avatarBackground
+val avatarBackground = GradientDrawable()
+avatarBackground.shape = GradientDrawable.OVAL
+avatarBackground.setColor(Color.rgb(110, 15, 25))
+avatarBackground.setStroke(dp(2), gold)
 
-                                val avatarParams = LinearLayout.LayoutParams(dp(56), dp(56))
-                                avatarParams.setMargins(0, 0, dp(14), 0)
-                                row.addView(avatar, avatarParams)
+avatar.background = avatarBackground
+avatar.clipToOutline = true
+
+val photoUrl = userDocument.getString("photoUrl")
+
+if (!photoUrl.isNullOrBlank()) {
+    loadImage(photoUrl, avatar)
+}
+
+val avatarParams = LinearLayout.LayoutParams(dp(56), dp(56))
+avatarParams.setMargins(0, 0, dp(14), 0)
+row.addView(avatar, avatarParams)
 
                                 val textLayout = LinearLayout(this)
                                 textLayout.orientation = LinearLayout.VERTICAL
@@ -1256,15 +1263,95 @@ chatList.addView(divider, dividerParams)
     }
 
     private fun showProfileDialog() {
-        val email = auth.currentUser?.email ?: "Vizitor"
+    val user = auth.currentUser
 
-        AlertDialog.Builder(this)
-            .setTitle("Profili im 🦅")
-            .setMessage("CHAT SHQIPONJA\n\nEmail: $email")
-            .setPositiveButton("MBYLL", null)
-            .setNeutralButton("DIL NGA LLOGARIA") { _, _ -> confirmLogout() }
-            .show()
+    if (user == null) {
+        toast("Je duke përdorur aplikacionin si vizitor.")
+        return
     }
+
+    val density = resources.displayMetrics.density
+    fun dp(value: Int): Int = (value * density).toInt()
+
+    val layout = LinearLayout(this)
+    layout.orientation = LinearLayout.VERTICAL
+    layout.gravity = Gravity.CENTER
+    layout.setPadding(dp(22), dp(20), dp(22), dp(15))
+    layout.setBackgroundColor(cardBackground)
+
+    val avatar = ImageView(this)
+    avatar.scaleType = ImageView.ScaleType.CENTER_CROP
+    avatar.setImageResource(android.R.drawable.ic_menu_myplaces)
+
+    val avatarBackground = GradientDrawable()
+    avatarBackground.shape = GradientDrawable.OVAL
+    avatarBackground.setColor(Color.rgb(100, 15, 25))
+    avatarBackground.setStroke(dp(3), gold)
+    avatar.background = avatarBackground
+    avatar.clipToOutline = true
+
+    val avatarParams = LinearLayout.LayoutParams(dp(115), dp(115))
+    avatarParams.gravity = Gravity.CENTER
+    avatarParams.setMargins(0, 0, 0, dp(15))
+    layout.addView(avatar, avatarParams)
+
+    val photoUrl = ""
+
+    db.collection("users").document(user.uid).get()
+        .addOnSuccessListener { document ->
+            val savedPhoto = document.getString("photoUrl")
+            if (!savedPhoto.isNullOrBlank()) {
+                loadImage(savedPhoto, avatar)
+            }
+        }
+
+    val username = TextView(this)
+    username.text = user.email?.substringBefore("@") ?: "Përdorues"
+    username.textSize = 21f
+    username.typeface = Typeface.DEFAULT_BOLD
+    username.setTextColor(white)
+    username.gravity = Gravity.CENTER
+    layout.addView(username)
+
+    val email = TextView(this)
+    email.text = user.email ?: ""
+    email.textSize = 14f
+    email.setTextColor(secondaryText)
+    email.gravity = Gravity.CENTER
+    email.setPadding(0, dp(7), 0, dp(20))
+    layout.addView(email)
+
+    val changePhoto = Button(this)
+    changePhoto.text = "📷 NDRYSHO FOTOGRAFINË"
+    changePhoto.isAllCaps = false
+    changePhoto.setTextColor(Color.WHITE)
+
+    val buttonBackground = GradientDrawable()
+    buttonBackground.setColor(red)
+    buttonBackground.cornerRadius = dp(14).toFloat()
+    changePhoto.background = buttonBackground
+
+    layout.addView(
+        changePhoto,
+        LinearLayout.LayoutParams(-1, dp(52))
+    )
+
+    val dialog = AlertDialog.Builder(this)
+        .setTitle("🦅 PROFILI IM")
+        .setView(layout)
+        .setPositiveButton("MBYLL", null)
+        .setNeutralButton("DIL NGA LLOGARIA") { _, _ ->
+            confirmLogout()
+        }
+        .create()
+
+    changePhoto.setOnClickListener {
+        dialog.dismiss()
+        chooseProfilePhoto()
+    }
+
+    dialog.show()
+}
 
     private fun confirmLogout() {
         AlertDialog.Builder(this)
@@ -1323,22 +1410,63 @@ chatList.addView(divider, dividerParams)
     }
 
     private fun saveUserProfile() {
-        val user = auth.currentUser ?: return
+    val user = auth.currentUser ?: return
 
-        val userData = hashMapOf(
-    "uid" to user.uid,
-    "username" to (user.email?.substringBefore("@")?.lowercase() ?: "user"),
-    "photoUrl" to "",
-    "createdAt" to System.currentTimeMillis()
-)
+    val userData = hashMapOf<String, Any>(
+        "uid" to user.uid,
+        "username" to (user.email?.substringBefore("@")?.lowercase() ?: "user"),
+        "updatedAt" to System.currentTimeMillis()
+    )
 
-db.collection("users").document(user.uid).set(userData)
-    .addOnSuccessListener {
-        toast("Llogaria u krijua me sukses!")
+    db.collection("users").document(user.uid)
+        .set(
+            userData,
+            com.google.firebase.firestore.SetOptions.merge()
+        )
+        .addOnFailureListener { e ->
+            toast("Gabim në ruajtjen e profilit: ${e.message}")
+        }
+}
+    private fun uploadProfilePhoto(uri: Uri) {
+    val user = auth.currentUser
+
+    if (user == null) {
+        toast("Duhet të hysh në llogari.")
+        return
     }
-    .addOnFailureListener { e ->
-        toast("Gabim: ${e.message}")
-    }
+
+    toast("Po ngarkohet fotografia...")
+
+    val photoRef = storage.reference.child(
+        "profile_photos/${user.uid}/profile.jpg"
+    )
+
+    photoRef.putFile(uri)
+        .addOnSuccessListener {
+            photoRef.downloadUrl
+                .addOnSuccessListener { downloadUri ->
+
+                    db.collection("users")
+                        .document(user.uid)
+                        .set(
+                            mapOf("photoUrl" to downloadUri.toString()),
+                            com.google.firebase.firestore.SetOptions.merge()
+                        )
+                        .addOnSuccessListener {
+                            toast("Fotografia u ruajt! 🦅")
+                            showHome("chats")
+                        }
+                        .addOnFailureListener { e ->
+                            toast("Gabim në ruajtjen e fotos: ${e.message}")
+                        }
+                }
+                .addOnFailureListener { e ->
+                    toast("Gabim në marrjen e fotos: ${e.message}")
+                }
+        }
+        .addOnFailureListener { e ->
+            toast("Ngarkimi i fotos dështoi: ${e.message}")
+        }
 }
     private fun searchUser(query: String) {
         val currentUid = auth.currentUser?.uid
@@ -2188,30 +2316,51 @@ db.collection("users").document(user.uid).set(userData)
         }
     }
 
-    @Deprecated("Përdoret për zgjedhjen e medias")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == 3001 && resultCode == RESULT_OK) {
-            val uri = data?.data
+@Deprecated("Përdoret për zgjedhjen e medias")
+override fun onActivityResult(
+    requestCode: Int,
+    resultCode: Int,
+    data: Intent?
+) {
+    super.onActivityResult(requestCode, resultCode, data)
+
+    if (resultCode != RESULT_OK) return
+
+    val uri = data?.data
+
+    if (uri == null) {
+        toast("Nuk u zgjodh asnjë skedar.")
+        return
+    }
+
+    when (requestCode) {
+
+        PICK_PROFILE_IMAGE -> {
+            uploadProfilePhoto(uri)
+        }
+
+        3001 -> {
             val chatId = pendingUploadChatId
             pendingUploadChatId = null
 
-            if (uri == null || chatId == null) {
-                toast("Nuk u zgjodh asnjë skedar.")
+            if (chatId == null) {
+                toast("Nuk u gjet biseda.")
                 return
             }
 
             val mimeType = contentResolver.getType(uri) ?: ""
 
-            if (mimeType.startsWith("image/") || mimeType.startsWith("video/")) {
+            if (mimeType.startsWith("image/") ||
+                mimeType.startsWith("video/")
+            ) {
                 uploadMedia(uri, chatId, mimeType)
             } else {
                 toast("Zgjidh një foto ose video.")
             }
         }
     }
-
+}
     private fun uploadMedia(uri: Uri, chatId: String, mimeType: String) {
         val uid = auth.currentUser?.uid
         if (uid == null) {
