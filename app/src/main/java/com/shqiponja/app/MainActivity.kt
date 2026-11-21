@@ -1,4 +1,3 @@
-
 package com.shqiponja.app
 
 import android.app.Activity
@@ -26,6 +25,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.storage.FirebaseStorage
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
 import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
@@ -614,7 +614,7 @@ class MainActivity : Activity() {
             .show()
     }
 
-    // FAQJA E BISEDAVE ME BUTONIN PLUS POSHTE DJATHTAS
+    // FAQJA E BISEDAVE
     private fun showChatsPage(content: FrameLayout, uid: String?) {
         val density = resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
@@ -634,10 +634,7 @@ class MainActivity : Activity() {
         subtitle.gravity = Gravity.CENTER_VERTICAL
         subtitle.setPadding(dp(16), dp(12), dp(10), dp(12))
 
-        mainLayout.addView(
-            subtitle,
-            LinearLayout.LayoutParams(-1, dp(48))
-        )
+        mainLayout.addView(subtitle, LinearLayout.LayoutParams(-1, dp(48)))
 
         val scroll = ScrollView(this)
         val chatList = LinearLayout(this)
@@ -645,17 +642,10 @@ class MainActivity : Activity() {
         chatList.setPadding(dp(10), dp(5), dp(10), dp(80))
         scroll.addView(chatList)
 
-        mainLayout.addView(
-            scroll,
-            LinearLayout.LayoutParams(-1, 0, 1f)
-        )
+        mainLayout.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        page.addView(
-            mainLayout,
-            FrameLayout.LayoutParams(-1, -1)
-        )
+        page.addView(mainLayout, FrameLayout.LayoutParams(-1, -1))
 
-        // BUTONI PLUS JESHiL POSHTE DJATHTAS
         val plusButton = TextView(this)
         plusButton.text = "+"
         plusButton.textSize = 31f
@@ -675,22 +665,15 @@ class MainActivity : Activity() {
         }
 
         val plusParams = FrameLayout.LayoutParams(
-            dp(52),
-            dp(52),
-            Gravity.BOTTOM or Gravity.END
+            dp(52), dp(52), Gravity.BOTTOM or Gravity.END
         )
         plusParams.setMargins(0, 0, dp(18), dp(20))
         page.addView(plusButton, plusParams)
 
-        content.addView(
-            page,
-            FrameLayout.LayoutParams(-1, -1)
-        )
+        content.addView(page, FrameLayout.LayoutParams(-1, -1))
 
         if (uid == null) {
-            chatList.addView(
-                makeLabel("Hyr në llogari për të përdorur bisedat.")
-            )
+            chatList.addView(makeLabel("Hyr në llogari për të përdorur bisedat."))
             return
         }
 
@@ -706,16 +689,24 @@ class MainActivity : Activity() {
                 }
 
                 chatList.removeAllViews()
+
                 val documents = snapshots?.documents ?: emptyList()
 
-                if (documents.isEmpty()) {
+                // Mos shfaq bisedat që përdoruesi i ka fshehur për vete.
+                val visibleDocuments = documents.filter { document ->
+                    val hiddenFor = document.get("hiddenFor") as? List<*>
+                        ?: emptyList<Any>()
+                    !hiddenFor.contains(uid)
+                }
+
+                if (visibleDocuments.isEmpty()) {
                     chatList.addView(
                         makeLabel("Nuk ke ende biseda.\n\nShtyp + për të kërkuar kontakte! 🦅")
                     )
                     return@addSnapshotListener
                 }
 
-                documents.forEach { document ->
+                visibleDocuments.forEach { document ->
                     val participants = document.get("participants") as? List<*>
                         ?: emptyList<Any>()
 
@@ -732,11 +723,15 @@ class MainActivity : Activity() {
                                 .document(document.id)
                                 .collection("messages")
                                 .orderBy("createdAt", Query.Direction.DESCENDING)
-                                .limit(1)
                                 .get()
                                 .addOnSuccessListener { messages ->
 
-                                    val lastDocument = messages.documents.firstOrNull()
+                                    val lastDocument = messages.documents.firstOrNull { msg ->
+                                        val hiddenFor = msg.get("hiddenFor") as? List<*>
+                                            ?: emptyList<Any>()
+                                        !hiddenFor.contains(uid)
+                                    }
+
                                     val lastType = lastDocument?.getString("type") ?: "text"
 
                                     val lastMessage = when (lastType) {
@@ -973,9 +968,11 @@ class MainActivity : Activity() {
         val participants = listOf(currentUserId, otherUserId).sorted()
         val chatId = participants.joinToString("_")
 
-        val chatData = hashMapOf(
+        val chatData = hashMapOf<String, Any>(
             "participants" to participants,
-            "createdAt" to System.currentTimeMillis()
+            "createdAt" to System.currentTimeMillis(),
+            // Nëse biseda ishte fshehur më parë, hape përsëri për këtë përdorues.
+            "hiddenFor" to FieldValue.arrayRemove(currentUserId)
         )
 
         db.collection("chats")
@@ -987,6 +984,97 @@ class MainActivity : Activity() {
             .addOnFailureListener {
                 toast("Gabim: ${it.message}")
             }
+    }
+
+    // FSHi NJË MESAZH
+    private fun showMessageDeleteDialog(
+        chatId: String,
+        messageId: String,
+        isMine: Boolean
+    ) {
+        val uid = auth.currentUser?.uid ?: return
+
+        val options = if (isMine) {
+            arrayOf("Fshi për mua", "Fshi për të gjithë", "ANULO")
+        } else {
+            arrayOf("Fshi për mua", "ANULO")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Fshi mesazhin")
+            .setItems(options) { _, which ->
+                when (options[which]) {
+                    "Fshi për mua" -> {
+                        AlertDialog.Builder(this)
+                            .setTitle("Fshi për mua")
+                            .setMessage("Ky mesazh nuk do të shfaqet më në bisedën tënde. Personi tjetër do ta shohë ende.")
+                            .setPositiveButton("Fshi") { _, _ ->
+                                db.collection("chats")
+                                    .document(chatId)
+                                    .collection("messages")
+                                    .document(messageId)
+                                    .update("hiddenFor", FieldValue.arrayUnion(uid))
+                                    .addOnSuccessListener {
+                                        toast("Mesazhi u fshi për ty.")
+                                    }
+                                    .addOnFailureListener {
+                                        toast("Nuk u fshi mesazhi: ${it.message}")
+                                    }
+                            }
+                            .setNegativeButton("ANULO", null)
+                            .show()
+                    }
+
+                    "Fshi për të gjithë" -> {
+                        AlertDialog.Builder(this)
+                            .setTitle("Fshi për të gjithë")
+                            .setMessage("A dëshiron ta fshish këtë mesazh edhe për personin tjetër?")
+                            .setPositiveButton("Fshi për të gjithë") { _, _ ->
+                                db.collection("chats")
+                                    .document(chatId)
+                                    .collection("messages")
+                                    .document(messageId)
+                                    .delete()
+                                    .addOnSuccessListener {
+                                        toast("Mesazhi u fshi për të gjithë.")
+                                    }
+                                    .addOnFailureListener {
+                                        toast("Nuk u fshi mesazhi: ${it.message}")
+                                    }
+                            }
+                            .setNegativeButton("ANULO", null)
+                            .show()
+                    }
+                }
+            }
+            .show()
+    }
+
+    // FSHi GJITHË BISEDËN VETËM PËR VETE
+    private fun hideWholeChat(chatId: String) {
+        val uid = auth.currentUser?.uid ?: return
+
+        AlertDialog.Builder(this)
+            .setTitle("Fshi gjithë bisedën")
+            .setMessage(
+                "Biseda do të hiqet vetëm nga lista jote.\n\n" +
+                "Personi tjetër do t'i ruajë mesazhet dhe do të vazhdojë t'i shohë ato.\n\n" +
+                "A dëshiron të vazhdosh?"
+            )
+            .setPositiveButton("Fshi për mua") { _, _ ->
+                db.collection("chats")
+                    .document(chatId)
+                    .update("hiddenFor", FieldValue.arrayUnion(uid))
+                    .addOnSuccessListener {
+                        toast("Biseda u hoq nga lista jote.")
+                        showHome("chats")
+                    }
+                    .addOnFailureListener {
+                        toast("Nuk u fshi biseda: ${it.message}")
+                    }
+            }
+            .setNegativeButton("ANULO", null)
+            .show()
     }
 
     // FAQJA E BISEDES
@@ -1095,6 +1183,7 @@ class MainActivity : Activity() {
             val popup = PopupMenu(this, menuButton)
             popup.menu.add("Profili i kontaktit")
             popup.menu.add("Privatësia")
+            popup.menu.add("Fshi gjithë bisedën")
             popup.menu.add("Mbyll bisedën")
 
             popup.setOnMenuItemClickListener { item ->
@@ -1109,6 +1198,10 @@ class MainActivity : Activity() {
                     }
                     "Privatësia" -> {
                         showPrivacyDialog()
+                        true
+                    }
+                    "Fshi gjithë bisedën" -> {
+                        hideWholeChat(chatId)
                         true
                     }
                     "Mbyll bisedën" -> {
@@ -1302,11 +1395,24 @@ class MainActivity : Activity() {
                 }
 
                 messageList.removeAllViews()
-                val documents = snapshots?.documents ?: emptyList()
 
-                if (documents.isEmpty()) {
+                val documents = snapshots?.documents ?: emptyList()
+                val currentUid = auth.currentUser?.uid
+
+                // Fshihen nga ekrani mesazhet që përdoruesi ka fshehur për vete.
+                val visibleMessages = documents.filter { document ->
+                    val hiddenFor = document.get("hiddenFor") as? List<*>
+                        ?: emptyList<Any>()
+                    !hiddenFor.contains(currentUid)
+                }
+
+                if (visibleMessages.isEmpty()) {
                     val empty = TextView(this)
-                    empty.text = "🦅\n\nKjo është biseda juaj e parë.\nDërgo një mesazh për të filluar!"
+                    empty.text = if (documents.isEmpty()) {
+                        "🦅\n\nKjo është biseda juaj e parë.\nDërgo një mesazh për të filluar!"
+                    } else {
+                        "Nuk ka mesazhe për të shfaqur."
+                    }
                     empty.textSize = 15f
                     empty.gravity = Gravity.CENTER
                     empty.setTextColor(Color.LTGRAY)
@@ -1314,14 +1420,14 @@ class MainActivity : Activity() {
                     messageList.addView(empty, LinearLayout.LayoutParams(-1, -2))
                 }
 
-                documents.forEach { document ->
+                visibleMessages.forEach { document ->
                     val senderId = document.getString("senderId") ?: ""
                     val type = document.getString("type") ?: "text"
                     val text = document.getString("text") ?: ""
                     val audioUrl = document.getString("audioUrl")
                     val mediaUrl = document.getString("mediaUrl")
                     val createdAt = document.getLong("createdAt") ?: 0L
-                    val isMine = senderId == auth.currentUser?.uid
+                    val isMine = senderId == currentUid
 
                     val row = LinearLayout(this)
                     row.orientation = LinearLayout.VERTICAL
@@ -1404,6 +1510,12 @@ class MainActivity : Activity() {
                         }
                     }
 
+                    // Shtypje e gjatë mbi mesazh për të hapur opsionet e fshirjes.
+                    bubble.setOnLongClickListener {
+                        showMessageDeleteDialog(chatId, document.id, isMine)
+                        true
+                    }
+
                     val bubbleParams = LinearLayout.LayoutParams(-2, -2)
                     bubbleParams.setMargins(dp(3), dp(3), dp(3), dp(2))
                     row.addView(bubble, bubbleParams)
@@ -1422,6 +1534,12 @@ class MainActivity : Activity() {
                     time.gravity = if (isMine) Gravity.END else Gravity.START
                     time.setPadding(dp(7), dp(1), dp(7), dp(2))
                     row.addView(time)
+
+                    // Mund të shtypet gjatë edhe mbi rreshtin e mesazhit.
+                    row.setOnLongClickListener {
+                        showMessageDeleteDialog(chatId, document.id, isMine)
+                        true
+                    }
 
                     val rowParams = LinearLayout.LayoutParams(-1, -2)
                     rowParams.setMargins(0, dp(3), 0, dp(3))
