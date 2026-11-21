@@ -2441,6 +2441,190 @@ override fun onActivityResult(
             }
     }
 
+private fun uploadStatus(uri: Uri, mimeType: String) {
+    val uid = auth.currentUser?.uid
+    if (uid == null) {
+        toast("Duhet të hysh në llogari.")
+        return
+    }
+
+    val isImage = mimeType.startsWith("image/")
+    val type = if (isImage) "image" else "video"
+    val extension = if (isImage) "jpg" else "mp4"
+
+    toast("Po ngarkohet statusi...")
+
+    val now = System.currentTimeMillis()
+
+    val storageRef = storage.reference.child(
+        "statuses/$uid/${UUID.randomUUID()}.$extension"
+    )
+
+    storageRef.putFile(uri)
+        .addOnSuccessListener {
+            storageRef.downloadUrl
+                .addOnSuccessListener { downloadUri ->
+
+                    val statusData = hashMapOf<String, Any>(
+                        "userId" to uid,
+                        "mediaUrl" to downloadUri.toString(),
+                        "type" to type,
+                        "mimeType" to mimeType,
+                        "createdAt" to now,
+                        "expiresAt" to (now + 24 * 60 * 60 * 1000L)
+                    )
+
+                    db.collection("statuses")
+                        .add(statusData)
+                        .addOnSuccessListener {
+                            toast("Statusi u publikua me sukses! ✅")
+                        }
+                        .addOnFailureListener {
+                            toast("Gabim në ruajtjen e statusit: ${it.message}")
+                        }
+                }
+                .addOnFailureListener {
+                    toast("Nuk u mor lidhja e medias: ${it.message}")
+                }
+        }
+        .addOnFailureListener {
+            toast("Ngarkimi i statusit dështoi: ${it.message}")
+        }
+}
+
+private fun showStatusesPage(content: FrameLayout, uid: String?) {
+    content.removeAllViews()
+
+    val layout = LinearLayout(this)
+    layout.orientation = LinearLayout.VERTICAL
+    layout.setPadding(20, 20, 20, 20)
+    layout.setBackgroundColor(pageBackground)
+
+    val title = TextView(this)
+    title.text = "Përditësimet"
+    title.textSize = 23f
+    title.setTypeface(null, Typeface.BOLD)
+    title.setTextColor(black)
+    layout.addView(title)
+
+    val addButton = Button(this)
+    addButton.text = "＋ Shto foto ose video në status"
+    layout.addView(addButton)
+
+    addButton.setOnClickListener {
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.type = "*/*"
+        intent.putExtra(
+            Intent.EXTRA_MIME_TYPES,
+            arrayOf("image/*", "video/*")
+        )
+        startActivityForResult(intent, 3002)
+    }
+
+    val subtitle = TextView(this)
+    subtitle.text = "Statuset e fundit"
+    subtitle.textSize = 18f
+    subtitle.setTextColor(black)
+    subtitle.setPadding(0, 25, 0, 12)
+    layout.addView(subtitle)
+
+    val scrollView = ScrollView(this)
+    val statusList = LinearLayout(this)
+    statusList.orientation = LinearLayout.VERTICAL
+
+    scrollView.addView(statusList)
+
+    layout.addView(
+        scrollView,
+        LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            0,
+            1f
+        )
+    )
+
+    content.addView(
+        layout,
+        FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        )
+    )
+
+    db.collection("statuses")
+        .get()
+        .addOnSuccessListener { documents ->
+
+            statusList.removeAllViews()
+
+            val now = System.currentTimeMillis()
+
+            val activeStatuses = documents.documents
+                .filter {
+                    (it.getLong("expiresAt") ?: 0L) > now
+                }
+                .sortedByDescending {
+                    it.getLong("createdAt") ?: 0L
+                }
+
+            if (activeStatuses.isEmpty()) {
+                val emptyText = TextView(this)
+                emptyText.text = "Nuk ka ende statuse."
+                emptyText.textSize = 16f
+                emptyText.setTextColor(black)
+                statusList.addView(emptyText)
+            }
+
+            for (document in activeStatuses) {
+                val ownerId = document.getString("userId") ?: ""
+                val mediaUrl = document.getString("mediaUrl") ?: ""
+                val type = document.getString("type") ?: "image"
+
+                val item = TextView(this)
+
+                val ownerName = if (ownerId == uid) {
+                    "Statusi yt"
+                } else {
+                    "Status i përdoruesit"
+                }
+
+                val mediaName = if (type == "image") {
+                    "📷 Foto"
+                } else {
+                    "🎥 Video"
+                }
+
+                item.text = "$ownerName\n$mediaName\nHap statusin"
+                item.textSize = 17f
+                item.setTextColor(black)
+                item.setPadding(18, 20, 18, 20)
+
+                statusList.addView(item)
+
+                item.setOnClickListener {
+                    if (mediaUrl.isNotEmpty()) {
+                        try {
+                            val viewIntent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse(mediaUrl)
+                            )
+                            viewIntent.setDataAndType(
+                                Uri.parse(mediaUrl),
+                                if (type == "image") "image/*" else "video/*"
+                            )
+                            startActivity(viewIntent)
+                        } catch (_: Exception) {
+                            toast("Nuk u hap statusi.")
+                        }
+                    }
+                }
+            }
+        }
+        .addOnFailureListener {
+            toast("Nuk u ngarkuan statuset: ${it.message}")
+        }
+}
+
     // SHFAQJA E FOTOS DHE VIDEOS
     private fun loadImage(url: String, imageView: ImageView) {
         Thread {
