@@ -499,111 +499,127 @@ private fun chooseProfilePhoto() {
         }
     }
 
-    private fun showHome(tab: String = selectedHomeTab) {
-        selectedHomeTab = tab
+    
+private fun showHome(tab: String = selectedHomeTab) {
+    selectedHomeTab = tab
 
-        messagesListener?.remove()
-        messagesListener = null
-        chatsListener?.remove()
-        chatsListener = null
+    messagesListener?.remove()
+    messagesListener = null
+    chatsListener?.remove()
+    chatsListener = null
 
-        val uid = auth.currentUser?.uid
-        val density = resources.displayMetrics.density
-        fun dp(value: Int): Int = (value * density).toInt()
+    val uid = auth.currentUser?.uid
+    val density = resources.displayMetrics.density
+    fun dp(value: Int): Int = (value * density).toInt()
 
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setBackgroundColor(Color.WHITE)
+    val layout = LinearLayout(this)
+    layout.orientation = LinearLayout.VERTICAL
+    layout.setBackgroundColor(Color.WHITE)
 
-        val header = LinearLayout(this)
-        header.orientation = LinearLayout.HORIZONTAL
-        header.gravity = Gravity.CENTER_VERTICAL
-        header.setPadding(dp(16), dp(8), dp(12), dp(8))
-        header.setBackgroundColor(red)
+    val header = LinearLayout(this)
+    header.orientation = LinearLayout.HORIZONTAL
+    header.gravity = Gravity.CENTER_VERTICAL
+    header.setPadding(dp(16), dp(8), dp(12), dp(8))
+    header.setBackgroundColor(red)
 
-        val title = TextView(this)
-        title.text = "CHAT SHQIPONJA"
-        title.textSize = 22f
-        title.typeface = Typeface.DEFAULT_BOLD
-        title.setTextColor(Color.WHITE)
-        title.gravity = Gravity.CENTER_VERTICAL
-        header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
+    val title = TextView(this)
+    title.text = "CHAT SHQIPONJA"
+    title.textSize = 22f
+    title.typeface = Typeface.DEFAULT_BOLD
+    title.setTextColor(Color.WHITE)
+    title.gravity = Gravity.CENTER_VERTICAL
+    header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
 
-        val settingsButton = TextView(this)
-        settingsButton.text = "⋮"
-        settingsButton.textSize = 34f
-        settingsButton.typeface = Typeface.DEFAULT_BOLD
-        settingsButton.setTextColor(Color.WHITE)
-        settingsButton.gravity = Gravity.CENTER
-        settingsButton.setPadding(dp(14), 0, dp(8), 0)
-        settingsButton.minimumWidth = dp(45)
-        settingsButton.minimumHeight = dp(45)
-        settingsButton.setOnClickListener { showMainMenu(settingsButton) }
-        header.addView(settingsButton)
+    val settingsButton = TextView(this)
+    settingsButton.text = "⋮"
+    settingsButton.textSize = 34f
+    settingsButton.typeface = Typeface.DEFAULT_BOLD
+    settingsButton.setTextColor(Color.WHITE)
+    settingsButton.gravity = Gravity.CENTER
+    settingsButton.setPadding(dp(14), 0, dp(8), 0)
+    settingsButton.minimumWidth = dp(45)
+    settingsButton.minimumHeight = dp(45)
+    settingsButton.setOnClickListener { showMainMenu(settingsButton) }
+    header.addView(settingsButton)
 
-        val content = FrameLayout(this)
+    val content = FrameLayout(this)
 
-        val bottomNav = LinearLayout(this)
-        bottomNav.orientation = LinearLayout.HORIZONTAL
-        bottomNav.gravity = Gravity.CENTER
-        bottomNav.setBackgroundColor(Color.WHITE)
-        bottomNav.setPadding(dp(5), dp(7), dp(5), dp(7))
+    val bottomNav = LinearLayout(this)
+    bottomNav.orientation = LinearLayout.HORIZONTAL
+    bottomNav.gravity = Gravity.CENTER
+    bottomNav.setBackgroundColor(Color.WHITE)
+    bottomNav.setPadding(dp(5), dp(7), dp(5), dp(7))
 
-        fun makeTab(icon: String, label: String, tabName: String): LinearLayout {
-            val selected = selectedHomeTab == tabName
-            val tab = LinearLayout(this)
-            tab.orientation = LinearLayout.VERTICAL
-            tab.gravity = Gravity.CENTER
-            tab.setPadding(dp(10), dp(7), dp(10), dp(7))
+    fun makeTab(icon: String, label: String, tabName: String): LinearLayout {
+        val selected = selectedHomeTab == tabName
+        val tabView = LinearLayout(this)
+        tabView.orientation = LinearLayout.VERTICAL
+        tabView.gravity = Gravity.CENTER
+        tabView.setPadding(dp(10), dp(7), dp(10), dp(7))
 
-            val tabBackground = GradientDrawable()
-            tabBackground.cornerRadius = dp(18).toFloat()
-            tabBackground.setColor(
-                if (selected) {
-                    if (isLightTheme) Color.rgb(255, 235, 235)
-                    else Color.rgb(75, 25, 30)
-                } else {
-                    Color.TRANSPARENT
-                }
-            )
-            tab.background = tabBackground
-
-            val iconView = TextView(this)
-            iconView.text = icon
-            iconView.textSize = 21f
-            iconView.gravity = Gravity.CENTER
-            iconView.setTextColor(if (selected) gold else secondaryText)
-
-            val labelView = TextView(this)
-            labelView.text = label
-            labelView.textSize = 13f
-            labelView.typeface = Typeface.DEFAULT_BOLD
-            labelView.gravity = Gravity.CENTER
-            labelView.setTextColor(if (selected) gold else secondaryText)
-
-            tab.addView(iconView)
-            tab.addView(labelView)
-            tab.setOnClickListener {
-                if (selectedHomeTab != tabName) showHome(tabName)
+        val tabBackground = GradientDrawable()
+        tabBackground.cornerRadius = dp(18).toFloat()
+        tabBackground.setColor(
+            if (selected) {
+                if (isLightTheme) Color.rgb(255, 235, 235)
+                else Color.rgb(75, 25, 30)
+            } else {
+                Color.TRANSPARENT
             }
-            return tab
+        )
+        tabView.background = tabBackground
+
+        val iconView = TextView(this)
+        iconView.text = icon
+        iconView.textSize = 21f
+        iconView.gravity = Gravity.CENTER
+        iconView.setTextColor(if (selected) gold else secondaryText)
+
+        val labelView = TextView(this)
+        labelView.text = label
+        labelView.textSize = 13f
+        labelView.typeface = Typeface.DEFAULT_BOLD
+        labelView.gravity = Gravity.CENTER
+        labelView.setTextColor(if (selected) gold else secondaryText)
+
+        tabView.addView(iconView)
+        tabView.addView(labelView)
+
+        tabView.setOnClickListener {
+            if (selectedHomeTab != tabName) showHome(tabName)
         }
 
-        bottomNav.addView(makeTab("💬", "Chats", "chats"), LinearLayout.LayoutParams(0, -2, 1f))
-        bottomNav.addView(makeTab("📞", "Calls", "calls"), LinearLayout.LayoutParams(0, -2, 1f))
-
-        layout.addView(header)
-        layout.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
-        layout.addView(bottomNav)
-        setContentView(layout)
-
-        if (selectedHomeTab == "calls") {
-            showCallsPage(content)
-            return
-        }
-
-        showChatsPage(content, uid)
+        return tabView
     }
+
+    bottomNav.addView(
+        makeTab("💬", "Chats", "chats"),
+        LinearLayout.LayoutParams(0, -2, 1f)
+    )
+
+    bottomNav.addView(
+        makeTab("⭕", "Updates", "updates"),
+        LinearLayout.LayoutParams(0, -2, 1f)
+    )
+
+    bottomNav.addView(
+        makeTab("📞", "Calls", "calls"),
+        LinearLayout.LayoutParams(0, -2, 1f)
+    )
+
+    layout.addView(header)
+    layout.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
+    layout.addView(bottomNav)
+
+    setContentView(layout)
+
+    when (selectedHomeTab) {
+        "calls" -> showCallsPage(content)
+        "updates" -> showStatusesPage(content, uid)
+        else -> showChatsPage(content, uid)
+    }
+}
+
 
     private fun showMainMenu(anchor: View) {
         val popup = PopupMenu(this, anchor)
@@ -2317,6 +2333,7 @@ chatList.addView(divider, dividerParams)
     }
 
 
+
 @Deprecated("Përdoret për zgjedhjen e medias")
 override fun onActivityResult(
     requestCode: Int,
@@ -2335,7 +2352,6 @@ override fun onActivityResult(
     }
 
     when (requestCode) {
-
         PICK_PROFILE_IMAGE -> {
             uploadProfilePhoto(uri)
         }
@@ -2359,8 +2375,21 @@ override fun onActivityResult(
                 toast("Zgjidh një foto ose video.")
             }
         }
+
+        3002 -> {
+            val mimeType = contentResolver.getType(uri) ?: ""
+
+            if (mimeType.startsWith("image/") ||
+                mimeType.startsWith("video/")
+            ) {
+                uploadStatus(uri, mimeType)
+            } else {
+                toast("Zgjidh një foto ose video.")
+            }
+        }
     }
 }
+
     private fun uploadMedia(uri: Uri, chatId: String, mimeType: String) {
         val uid = auth.currentUser?.uid
         if (uid == null) {
