@@ -1437,14 +1437,20 @@ chatList.addView(divider, dividerParams)
         val user = auth.currentUser ?: return
 
         val userData = hashMapOf(
-            "uid" to user.uid,
-            "username" to (user.email?.substringBefore("@")?.lowercase() ?: "user"),
-            "createdAt" to System.currentTimeMillis()
-        )
+    "uid" to user.uid,
+    "username" to (user.email?.substringBefore("@")?.lowercase() ?: "user"),
+    "photoUrl" to "",
+    "createdAt" to System.currentTimeMillis()
+)
 
-        db.collection("users").document(user.uid).set(userData)
+db.collection("users").document(user.uid).set(userData)
+    .addOnSuccessListener {
+        toast("Llogaria u krijua me sukses!")
     }
-
+    .addOnFailureListener { e ->
+        toast("Gabim: ${e.message}")
+    }
+}
     private fun searchUser(query: String) {
         val currentUid = auth.currentUser?.uid
         if (currentUid == null) {
