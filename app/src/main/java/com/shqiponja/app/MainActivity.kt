@@ -506,7 +506,7 @@ class MainActivity : Activity() {
 
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
-        layout.setBackgroundColor(black)
+        layout.setBackgroundColor(Color.WHITE)
 
         val header = LinearLayout(this)
         header.orientation = LinearLayout.HORIZONTAL
@@ -539,9 +539,7 @@ class MainActivity : Activity() {
         val bottomNav = LinearLayout(this)
         bottomNav.orientation = LinearLayout.HORIZONTAL
         bottomNav.gravity = Gravity.CENTER
-        bottomNav.setBackgroundColor(
-            if (isLightTheme) Color.WHITE else Color.rgb(30, 30, 30)
-        )
+        bottomNav.setBackgroundColor(Color.WHITE)
         bottomNav.setPadding(dp(5), dp(7), dp(5), dp(7))
 
         fun makeTab(icon: String, label: String, tabName: String): LinearLayout {
@@ -640,8 +638,7 @@ class MainActivity : Activity() {
 
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        page.setBackgroundColor(pageBackground)
-
+        page.setBackgroundColor(Color.WHITE)
         val header = LinearLayout(this)
         header.orientation = LinearLayout.HORIZONTAL
         header.gravity = Gravity.CENTER_VERTICAL
@@ -1026,7 +1023,7 @@ class MainActivity : Activity() {
 
         val mainLayout = LinearLayout(this)
         mainLayout.orientation = LinearLayout.VERTICAL
-        mainLayout.setBackgroundColor(black)
+        mainLayout.setBackgroundColor(Color.WHITE)
 
         val subtitle = TextView(this)
         subtitle.text = "BISEDAT E MIA"
