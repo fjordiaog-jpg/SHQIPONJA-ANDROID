@@ -564,7 +564,7 @@ class MainActivity : Activity() {
         popup.setOnMenuItemClickListener { item ->
             when (item.title.toString()) {
                 "Cilësimet" -> {
-                    showSettingsDialog()
+                    showSettingsPage()
                     true
                 }
                 "Profili im" -> {
@@ -585,19 +585,379 @@ class MainActivity : Activity() {
         popup.show()
     }
 
-    private fun showSettingsDialog() {
+    // FAQJA E RE E CILËSIMEVE
+    private fun showSettingsPage() {
+        val density = resources.displayMetrics.density
+        fun dp(value: Int): Int = (value * density).toInt()
+
         val email = auth.currentUser?.email ?: "Vizitor"
-        val message =
-            "🦅 CHAT SHQIPONJA\n\n" +
-            "Llogaria: $email\n\n" +
-            "Versioni: 1.0\n\n" +
-            "Cilësimet e tjera të aplikacionit do të shtohen në këtë seksion."
+
+        val page = LinearLayout(this)
+        page.orientation = LinearLayout.VERTICAL
+        page.setBackgroundColor(Color.rgb(15, 15, 18))
+
+        val header = LinearLayout(this)
+        header.orientation = LinearLayout.HORIZONTAL
+        header.gravity = Gravity.CENTER_VERTICAL
+        header.setPadding(dp(12), dp(10), dp(12), dp(10))
+        header.setBackgroundColor(Color.rgb(160, 15, 30))
+
+        val back = TextView(this)
+        back.text = "‹"
+        back.textSize = 38f
+        back.setTextColor(Color.WHITE)
+        back.gravity = Gravity.CENTER
+        header.addView(back, LinearLayout.LayoutParams(dp(45), dp(50)))
+        back.setOnClickListener { showHome("chats") }
+
+        val heading = TextView(this)
+        heading.text = "CILËSIMET"
+        heading.textSize = 21f
+        heading.typeface = Typeface.DEFAULT_BOLD
+        heading.setTextColor(Color.WHITE)
+        header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
+
+        val scroll = ScrollView(this)
+        val list = LinearLayout(this)
+        list.orientation = LinearLayout.VERTICAL
+        list.setPadding(dp(14), dp(15), dp(14), dp(25))
+
+        fun section(text: String) {
+            val label = TextView(this)
+            label.text = text
+            label.textSize = 13f
+            label.typeface = Typeface.DEFAULT_BOLD
+            label.setTextColor(Color.rgb(225, 175, 65))
+            label.setPadding(dp(5), dp(17), dp(5), dp(8))
+            list.addView(label)
+        }
+
+        fun makeCard(): LinearLayout {
+            val card = LinearLayout(this)
+            card.orientation = LinearLayout.VERTICAL
+            card.setPadding(dp(12), dp(5), dp(12), dp(5))
+
+            val bg = GradientDrawable()
+            bg.setColor(Color.rgb(35, 35, 40))
+            bg.cornerRadius = dp(16).toFloat()
+            bg.setStroke(dp(1), Color.rgb(75, 65, 60))
+            card.background = bg
+
+            val params = LinearLayout.LayoutParams(-1, -2)
+            params.setMargins(0, 0, 0, dp(5))
+            list.addView(card, params)
+            return card
+        }
+
+        fun addRow(
+            card: LinearLayout,
+            icon: String,
+            title: String,
+            description: String,
+            action: () -> Unit
+        ) {
+            val row = LinearLayout(this)
+            row.orientation = LinearLayout.HORIZONTAL
+            row.gravity = Gravity.CENTER_VERTICAL
+            row.setPadding(dp(7), dp(13), dp(7), dp(13))
+            row.isClickable = true
+            row.isFocusable = true
+
+            val iconView = TextView(this)
+            iconView.text = icon
+            iconView.textSize = 24f
+            iconView.gravity = Gravity.CENTER
+            row.addView(iconView, LinearLayout.LayoutParams(dp(43), dp(45)))
+
+            val texts = LinearLayout(this)
+            texts.orientation = LinearLayout.VERTICAL
+            texts.setPadding(dp(8), 0, dp(5), 0)
+
+            val titleView = TextView(this)
+            titleView.text = title
+            titleView.textSize = 15f
+            titleView.typeface = Typeface.DEFAULT_BOLD
+            titleView.setTextColor(Color.WHITE)
+
+            val descView = TextView(this)
+            descView.text = description
+            descView.textSize = 12f
+            descView.setTextColor(Color.LTGRAY)
+            descView.setPadding(0, dp(4), 0, 0)
+
+            texts.addView(titleView)
+            texts.addView(descView)
+            row.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
+
+            val arrow = TextView(this)
+            arrow.text = "›"
+            arrow.textSize = 28f
+            arrow.setTextColor(Color.LTGRAY)
+            row.addView(arrow)
+
+            row.setOnClickListener { action() }
+            card.addView(row)
+
+            val divider = View(this)
+            divider.setBackgroundColor(Color.rgb(65, 65, 70))
+            card.addView(divider, LinearLayout.LayoutParams(-1, dp(1)))
+        }
+
+        section("LLOGARIA")
+
+        val accountCard = makeCard()
+
+        val accountRow = LinearLayout(this)
+        accountRow.orientation = LinearLayout.HORIZONTAL
+        accountRow.gravity = Gravity.CENTER_VERTICAL
+        accountRow.setPadding(dp(8), dp(14), dp(8), dp(14))
+
+        val eagle = TextView(this)
+        eagle.text = "🦅"
+        eagle.textSize = 34f
+        eagle.gravity = Gravity.CENTER
+
+        val eagleBg = GradientDrawable()
+        eagleBg.shape = GradientDrawable.OVAL
+        eagleBg.setColor(Color.rgb(100, 12, 25))
+        eagleBg.setStroke(dp(2), gold)
+        eagle.background = eagleBg
+
+        accountRow.addView(eagle, LinearLayout.LayoutParams(dp(55), dp(55)))
+
+        val accountInfo = LinearLayout(this)
+        accountInfo.orientation = LinearLayout.VERTICAL
+        accountInfo.setPadding(dp(12), 0, 0, 0)
+
+        val accountName = TextView(this)
+        accountName.text = "CHAT SHQIPONJA"
+        accountName.textSize = 16f
+        accountName.typeface = Typeface.DEFAULT_BOLD
+        accountName.setTextColor(Color.WHITE)
+
+        val accountEmail = TextView(this)
+        accountEmail.text = email
+        accountEmail.textSize = 12f
+        accountEmail.setTextColor(Color.LTGRAY)
+        accountEmail.setPadding(0, dp(5), 0, 0)
+
+        accountInfo.addView(accountName)
+        accountInfo.addView(accountEmail)
+        accountRow.addView(accountInfo)
+
+        accountCard.addView(accountRow)
+
+        addRow(
+            accountCard,
+            "👤",
+            "Profili im",
+            "Shiko informacionet e llogarisë"
+        ) { showProfileDialog() }
+
+        section("PREFERENCAT")
+
+        val preferencesCard = makeCard()
+
+        addRow(
+            preferencesCard,
+            "🔔",
+            "Njoftimet",
+            "Preferenca e njoftimeve"
+        ) { showNotificationSettings() }
+
+        addRow(
+            preferencesCard,
+            "🎨",
+            "Pamja dhe tema",
+            "Zgjidh preferencën e pamjes"
+        ) { showThemeSettings() }
+
+        addRow(
+            preferencesCard,
+            "🌍",
+            "Gjuha",
+            "Zgjidh gjuhën e preferuar"
+        ) { showLanguageSettings() }
+
+        section("SIGURIA DHE TË DHËNAT")
+
+        val securityCard = makeCard()
+
+        addRow(
+            securityCard,
+            "🔒",
+            "Privatësia dhe siguria",
+            "Informacion mbi privatësinë"
+        ) { showPrivacyDialog() }
+
+        addRow(
+            securityCard,
+            "💾",
+            "Ruajtja dhe të dhënat",
+            "Informacion mbi ruajtjen e të dhënave"
+        ) { showDataSettings() }
+
+        section("RRETH APLIKACIONIT")
+
+        val aboutCard = makeCard()
+
+        addRow(
+            aboutCard,
+            "🦅",
+            "Rreth CHAT SHQIPONJA",
+            "Informacion dhe versioni i aplikacionit"
+        ) { showAboutSettings() }
+
+        val logout = TextView(this)
+        logout.text = "↪   DIL NGA LLOGARIA"
+        logout.textSize = 15f
+        logout.typeface = Typeface.DEFAULT_BOLD
+        logout.gravity = Gravity.CENTER
+        logout.setTextColor(Color.WHITE)
+        logout.setPadding(dp(12), dp(16), dp(12), dp(16))
+
+        val logoutBg = GradientDrawable()
+        logoutBg.setColor(Color.rgb(170, 15, 30))
+        logoutBg.cornerRadius = dp(14).toFloat()
+        logout.background = logoutBg
+
+        val logoutParams = LinearLayout.LayoutParams(-1, dp(53))
+        logoutParams.setMargins(0, dp(20), 0, dp(10))
+        list.addView(logout, logoutParams)
+
+        logout.setOnClickListener { confirmLogout() }
+
+        val footer = TextView(this)
+        footer.text = "🦅 CHAT SHQIPONJA  •  VERSIONI 1.0"
+        footer.textSize = 11f
+        footer.gravity = Gravity.CENTER
+        footer.setTextColor(Color.rgb(205, 165, 65))
+        footer.setPadding(0, dp(15), 0, dp(15))
+        list.addView(footer)
+
+        scroll.addView(list)
+        page.addView(header)
+        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        setContentView(page)
+    }
+
+    private fun showNotificationSettings() {
+        val prefs = getSharedPreferences("shqiponja_settings", MODE_PRIVATE)
+        val enabled = prefs.getBoolean("notifications_enabled", true)
+
+        val check = CheckBox(this)
+        check.text = "Aktivizo njoftimet"
+        check.textSize = 16f
+        check.setTextColor(Color.WHITE)
+        check.isChecked = enabled
+        check.setPadding(15, 15, 15, 15)
 
         AlertDialog.Builder(this)
-            .setTitle("⚙️ Cilësimet")
-            .setMessage(message)
+            .setTitle("🔔 Njoftimet")
+            .setView(check)
+            .setPositiveButton("RUAJ") { _, _ ->
+                prefs.edit()
+                    .putBoolean("notifications_enabled", check.isChecked)
+                    .apply()
+
+                toast("Preferenca e njoftimeve u ruajt.")
+                showSettingsPage()
+            }
+            .setNegativeButton("ANULO", null)
+            .show()
+    }
+
+    private fun showThemeSettings() {
+        val prefs = getSharedPreferences("shqiponja_settings", MODE_PRIVATE)
+        val current = prefs.getString("theme", "dark") ?: "dark"
+
+        val options = arrayOf("E errët", "E çelët")
+        val selected = if (current == "light") 1 else 0
+
+        AlertDialog.Builder(this)
+            .setTitle("🎨 Pamja dhe tema")
+            .setSingleChoiceItems(options, selected) { dialog, which ->
+                val theme = if (which == 0) "dark" else "light"
+
+                prefs.edit()
+                    .putString("theme", theme)
+                    .apply()
+
+                dialog.dismiss()
+                toast("Preferenca e temës u ruajt.")
+                showSettingsPage()
+            }
+            .setNegativeButton("MBYLL", null)
+            .show()
+    }
+
+    private fun showLanguageSettings() {
+        val prefs = getSharedPreferences("shqiponja_settings", MODE_PRIVATE)
+        val current = prefs.getString("language", "sq") ?: "sq"
+
+        val languages = arrayOf(
+            "Shqip",
+            "English",
+            "Italiano",
+            "Deutsch"
+        )
+
+        val codes = arrayOf("sq", "en", "it", "de")
+        val selected = codes.indexOf(current).coerceAtLeast(0)
+
+        AlertDialog.Builder(this)
+            .setTitle("🌍 Gjuha")
+            .setSingleChoiceItems(languages, selected) { dialog, which ->
+                prefs.edit()
+                    .putString("language", codes[which])
+                    .apply()
+
+                dialog.dismiss()
+                toast("Preferenca e gjuhës u ruajt.")
+                showSettingsPage()
+            }
+            .setNegativeButton("MBYLL", null)
+            .show()
+    }
+
+    private fun showDataSettings() {
+        val cacheSize = try {
+            val size = cacheDir.walkTopDown()
+                .filter { it.isFile }
+                .sumOf { it.length() }
+
+            String.format(
+                java.util.Locale.getDefault(),
+                "%.2f MB",
+                size / (1024.0 * 1024.0)
+            )
+        } catch (_: Exception) {
+            "Nuk u llogarit"
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("💾 Ruajtja dhe të dhënat")
+            .setMessage(
+                "CHAT SHQIPONJA\n\n" +
+                "Hapësira e cache: $cacheSize\n\n" +
+                "Bisedat dhe mediat ruhen përmes shërbimeve Firebase.\n\n" +
+                "Mos fshi të dhënat e aplikacionit nëse nuk dëshiron të dalësh nga llogaria."
+            )
+            .setPositiveButton("E KUPTOVA", null)
+            .show()
+    }
+
+    private fun showAboutSettings() {
+        AlertDialog.Builder(this)
+            .setTitle("🦅 Rreth CHAT SHQIPONJA")
+            .setMessage(
+                "CHAT SHQIPONJA\n\n" +
+                "Versioni: 1.0\n\n" +
+                "LIDHJE • KOMUNIKIM • BESIM\n\n" +
+                "Një aplikacion për komunikim, biseda, foto, video dhe telefonata."
+            )
             .setPositiveButton("MBYLL", null)
-            .setNeutralButton("PROFILI IM") { _, _ -> showProfileDialog() }
             .show()
     }
 
@@ -643,7 +1003,6 @@ class MainActivity : Activity() {
         scroll.addView(chatList)
 
         mainLayout.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-
         page.addView(mainLayout, FrameLayout.LayoutParams(-1, -1))
 
         val plusButton = TextView(this)
@@ -692,7 +1051,6 @@ class MainActivity : Activity() {
 
                 val documents = snapshots?.documents ?: emptyList()
 
-                // Mos shfaq bisedat që përdoruesi i ka fshehur për vete.
                 val visibleDocuments = documents.filter { document ->
                     val hiddenFor = document.get("hiddenFor") as? List<*>
                         ?: emptyList<Any>()
@@ -971,7 +1329,6 @@ class MainActivity : Activity() {
         val chatData = hashMapOf<String, Any>(
             "participants" to participants,
             "createdAt" to System.currentTimeMillis(),
-            // Nëse biseda ishte fshehur më parë, hape përsëri për këtë përdorues.
             "hiddenFor" to FieldValue.arrayRemove(currentUserId)
         )
 
@@ -1399,7 +1756,6 @@ class MainActivity : Activity() {
                 val documents = snapshots?.documents ?: emptyList()
                 val currentUid = auth.currentUser?.uid
 
-                // Fshihen nga ekrani mesazhet që përdoruesi ka fshehur për vete.
                 val visibleMessages = documents.filter { document ->
                     val hiddenFor = document.get("hiddenFor") as? List<*>
                         ?: emptyList<Any>()
@@ -1510,7 +1866,6 @@ class MainActivity : Activity() {
                         }
                     }
 
-                    // Shtypje e gjatë mbi mesazh për të hapur opsionet e fshirjes.
                     bubble.setOnLongClickListener {
                         showMessageDeleteDialog(chatId, document.id, isMine)
                         true
@@ -1535,7 +1890,6 @@ class MainActivity : Activity() {
                     time.setPadding(dp(7), dp(1), dp(7), dp(2))
                     row.addView(time)
 
-                    // Mund të shtypet gjatë edhe mbi rreshtin e mesazhit.
                     row.setOnLongClickListener {
                         showMessageDeleteDialog(chatId, document.id, isMine)
                         true
