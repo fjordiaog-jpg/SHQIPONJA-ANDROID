@@ -1131,72 +1131,196 @@ class MainActivity : Activity() {
 
                                     val lastType = lastDocument?.getString("type") ?: "text"
 
-                                    val lastMessage = when (lastType) {
-                                        "audio" -> "🎤 Mesazh zanor"
-                                        "image" -> "🖼️ Foto"
-                                        "video" -> "🎥 Video"
-                                        else -> lastDocument?.getString("text") ?: "Fillo bisedën"
-                                    }
+private fun showChatsPage(content: FrameLayout, uid: String?) {
+    val density = resources.displayMetrics.density
+    fun dp(value: Int): Int = (value * density).toInt()
 
-                                    val row = LinearLayout(this)
-                                    row.orientation = LinearLayout.HORIZONTAL
-                                    row.gravity = Gravity.CENTER_VERTICAL
-                                    row.setPadding(dp(12), dp(12), dp(12), dp(12))
-                                    row.setBackgroundColor(
-                                        if (isLightTheme) Color.WHITE
-                                        else Color.rgb(38, 38, 38)
-                                    )
+    val page = FrameLayout(this)
+    page.setBackgroundColor(Color.WHITE)
 
-                                    val avatar = TextView(this)
-                                    avatar.text = "🦅"
-                                    avatar.textSize = 27f
-                                    avatar.gravity = Gravity.CENTER
+    val mainLayout = LinearLayout(this)
+    mainLayout.orientation = LinearLayout.VERTICAL
+    mainLayout.setBackgroundColor(Color.WHITE)
 
-                                    val avatarBackground = GradientDrawable()
-                                    avatarBackground.shape = GradientDrawable.OVAL
-                                    avatarBackground.setColor(Color.rgb(110, 15, 25))
-                                    avatarBackground.setStroke(dp(2), gold)
-                                    avatar.background = avatarBackground
+    val subtitle = TextView(this)
+    subtitle.text = "BISEDAT E MIA"
+    subtitle.textSize = 17f
+    subtitle.typeface = Typeface.DEFAULT_BOLD
+    subtitle.setTextColor(Color.BLACK)
+    subtitle.gravity = Gravity.CENTER_VERTICAL
+    subtitle.setPadding(dp(16), dp(12), dp(10), dp(12))
 
-                                    val avatarParams = LinearLayout.LayoutParams(dp(56), dp(56))
-                                    avatarParams.setMargins(0, 0, dp(14), 0)
-                                    row.addView(avatar, avatarParams)
+    mainLayout.addView(subtitle, LinearLayout.LayoutParams(-1, dp(48)))
 
-                                    val textLayout = LinearLayout(this)
-                                    textLayout.orientation = LinearLayout.VERTICAL
+    val scroll = ScrollView(this)
+    val chatList = LinearLayout(this)
+    chatList.orientation = LinearLayout.VERTICAL
+    chatList.setPadding(dp(10), dp(5), dp(10), dp(80))
+    scroll.addView(chatList)
 
-                                    val name = TextView(this)
-                                    name.text = "@$username"
-                                    name.textSize = 18f
-                                    name.typeface = Typeface.DEFAULT_BOLD
-                                    name.setTextColor(white)
-                                    name.maxLines = 1
+    mainLayout.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+    page.addView(mainLayout, FrameLayout.LayoutParams(-1, -1))
 
-                                    val preview = TextView(this)
-                                    preview.text = lastMessage
-                                    preview.textSize = 14f
-                                    preview.setTextColor(secondaryText)
-                                    preview.maxLines = 1
-                                    preview.ellipsize = android.text.TextUtils.TruncateAt.END
-                                    preview.setPadding(0, dp(5), 0, 0)
+    val plusButton = TextView(this)
+    plusButton.text = "+"
+    plusButton.textSize = 31f
+    plusButton.typeface = Typeface.DEFAULT_BOLD
+    plusButton.setTextColor(Color.WHITE)
+    plusButton.gravity = Gravity.CENTER
+    plusButton.includeFontPadding = false
 
-                                    textLayout.addView(name)
-                                    textLayout.addView(preview)
-                                    row.addView(textLayout, LinearLayout.LayoutParams(0, -2, 1f))
+    val plusBackground = GradientDrawable()
+    plusBackground.shape = GradientDrawable.OVAL
+    plusBackground.setColor(red)
+    plusButton.background = plusBackground
+    plusButton.elevation = dp(8).toFloat()
 
-                                    val params = LinearLayout.LayoutParams(-1, -2)
-                                    params.setMargins(dp(3), dp(5), dp(3), dp(5))
-
-                                    row.setOnClickListener {
-                                        showChat(document.id, username, otherUid)
-                                    }
-
-                                    chatList.addView(row, params)
-                                }
-                        }
-                }
-            }
+    plusButton.setOnClickListener {
+        askUsername()
     }
+
+    val plusParams = FrameLayout.LayoutParams(
+        dp(52), dp(52), Gravity.BOTTOM or Gravity.END
+    )
+    plusParams.setMargins(0, 0, dp(18), dp(20))
+    page.addView(plusButton, plusParams)
+
+    content.addView(page, FrameLayout.LayoutParams(-1, -1))
+
+    if (uid == null) {
+        chatList.addView(makeLabel("Hyr në llogari për të përdorur bisedat."))
+        return
+    }
+
+    chatList.addView(makeLabel("Po ngarkohen bisedat..."))
+
+    chatsListener = db.collection("chats")
+        .whereArrayContains("participants", uid)
+        .addSnapshotListener { snapshots, error ->
+
+            if (error != null) {
+                toast("Gabim: ${error.message}")
+                return@addSnapshotListener
+            }
+
+            chatList.removeAllViews()
+
+            val documents = snapshots?.documents ?: emptyList()
+
+            val visibleDocuments = documents.filter { document ->
+                val hiddenFor = document.get("hiddenFor") as? List<*>
+                    ?: emptyList<Any>()
+                !hiddenFor.contains(uid)
+            }
+
+            if (visibleDocuments.isEmpty()) {
+                chatList.addView(
+                    makeLabel("Nuk ke ende biseda.\n\nShtyp + për të kërkuar kontakte! 🦅")
+                )
+                return@addSnapshotListener
+            }
+
+            visibleDocuments.forEach { document ->
+                val participants = document.get("participants") as? List<*>
+                    ?: emptyList<Any>()
+
+                val otherUid = participants
+                    .filterIsInstance<String>()
+                    .firstOrNull { it != uid } ?: return@forEach
+
+                db.collection("users").document(otherUid).get()
+                    .addOnSuccessListener { userDocument ->
+
+                        val username = userDocument.getString("username") ?: "Përdorues"
+
+                        db.collection("chats")
+                            .document(document.id)
+                            .collection("messages")
+                            .orderBy("createdAt", Query.Direction.DESCENDING)
+                            .get()
+                            .addOnSuccessListener { messages ->
+
+                                val lastDocument = messages.documents.firstOrNull { msg ->
+                                    val hiddenFor = msg.get("hiddenFor") as? List<*>
+                                        ?: emptyList<Any>()
+                                    !hiddenFor.contains(uid)
+                                }
+
+                                val lastType = lastDocument?.getString("type") ?: "text"
+
+                                val lastMessage = when (lastType) {
+                                    "audio" -> "🎤 Mesazh zanor"
+                                    "image" -> "🖼️ Foto"
+                                    "video" -> "🎥 Video"
+                                    else -> lastDocument?.getString("text") ?: "Fillo bisedën"
+                                }
+
+                                val row = LinearLayout(this)
+                                row.orientation = LinearLayout.HORIZONTAL
+                                row.gravity = Gravity.CENTER_VERTICAL
+                                row.setPadding(dp(12), dp(12), dp(12), dp(12))
+                                row.setBackgroundColor(Color.WHITE)
+
+                                val avatar = TextView(this)
+                                avatar.text = "🦅"
+                                avatar.textSize = 27f
+                                avatar.gravity = Gravity.CENTER
+
+                                val avatarBackground = GradientDrawable()
+                                avatarBackground.shape = GradientDrawable.OVAL
+                                avatarBackground.setColor(Color.rgb(110, 15, 25))
+                                avatarBackground.setStroke(dp(2), gold)
+                                avatar.background = avatarBackground
+
+                                val avatarParams = LinearLayout.LayoutParams(dp(56), dp(56))
+                                avatarParams.setMargins(0, 0, dp(14), 0)
+                                row.addView(avatar, avatarParams)
+
+                                val textLayout = LinearLayout(this)
+                                textLayout.orientation = LinearLayout.VERTICAL
+
+                                val name = TextView(this)
+                                name.text = "@$username"
+                                name.textSize = 18f
+                                name.typeface = Typeface.DEFAULT_BOLD
+                                name.setTextColor(Color.BLACK)
+                                name.maxLines = 1
+
+                                val preview = TextView(this)
+                                preview.text = lastMessage
+                                preview.textSize = 14f
+                                preview.setTextColor(Color.DKGRAY)
+                                preview.maxLines = 1
+                                preview.ellipsize = android.text.TextUtils.TruncateAt.END
+                                preview.setPadding(0, dp(5), 0, 0)
+
+                                textLayout.addView(name)
+                                textLayout.addView(preview)
+                                row.addView(textLayout, LinearLayout.LayoutParams(0, -2, 1f))
+
+                                val params = LinearLayout.LayoutParams(-1, -2)
+                                params.setMargins(dp(3), dp(5), dp(3), dp(5))
+
+                                row.setOnClickListener {
+                                    showChat(document.id, username, otherUid)
+                                }
+
+                                chatList.addView(row, params)
+
+val divider = View(this)
+divider.setBackgroundColor(Color.rgb(230, 230, 230))
+
+val dividerParams = LinearLayout.LayoutParams(
+    -1, dp(1)
+)
+dividerParams.setMargins(dp(82), 0, dp(5), 0)
+
+chatList.addView(divider, dividerParams)
+                            }
+                    }
+            }
+        }
+}
 
     private fun showCallsPage(content: FrameLayout) {
         val density = resources.displayMetrics.density
