@@ -40,11 +40,50 @@ class MainActivity : Activity() {
     private lateinit var db: FirebaseFirestore
     private val storage by lazy { FirebaseStorage.getInstance() }
 
+    // TEMA E APLIKACIONIT
+    private val isLightTheme: Boolean
+        get() = getSharedPreferences("shqiponja_settings", MODE_PRIVATE)
+            .getString("theme", "dark") == "light"
+
     private val red = Color.rgb(190, 20, 35)
-    private val black = Color.rgb(20, 20, 20)
-    private val white = Color.WHITE
+
+    private val black: Int
+        get() = if (isLightTheme) {
+            Color.rgb(245, 245, 248)
+        } else {
+            Color.rgb(20, 20, 20)
+        }
+
+    private val white: Int
+        get() = if (isLightTheme) {
+            Color.rgb(28, 28, 32)
+        } else {
+            Color.WHITE
+        }
+
     private val green = Color.rgb(20, 155, 85)
     private val gold = Color.rgb(220, 175, 65)
+
+    private val pageBackground: Int
+        get() = if (isLightTheme) {
+            Color.rgb(245, 245, 248)
+        } else {
+            Color.rgb(15, 15, 18)
+        }
+
+    private val cardBackground: Int
+        get() = if (isLightTheme) {
+            Color.WHITE
+        } else {
+            Color.rgb(35, 35, 40)
+        }
+
+    private val secondaryText: Int
+        get() = if (isLightTheme) {
+            Color.rgb(90, 90, 95)
+        } else {
+            Color.LTGRAY
+        }
 
     private val zegoResourceId = "shqiponja_call"
 
@@ -479,7 +518,7 @@ class MainActivity : Activity() {
         title.text = "CHAT SHQIPONJA"
         title.textSize = 22f
         title.typeface = Typeface.DEFAULT_BOLD
-        title.setTextColor(white)
+        title.setTextColor(Color.WHITE)
         title.gravity = Gravity.CENTER_VERTICAL
         header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
 
@@ -487,7 +526,7 @@ class MainActivity : Activity() {
         settingsButton.text = "⋮"
         settingsButton.textSize = 34f
         settingsButton.typeface = Typeface.DEFAULT_BOLD
-        settingsButton.setTextColor(white)
+        settingsButton.setTextColor(Color.WHITE)
         settingsButton.gravity = Gravity.CENTER
         settingsButton.setPadding(dp(14), 0, dp(8), 0)
         settingsButton.minimumWidth = dp(45)
@@ -500,7 +539,9 @@ class MainActivity : Activity() {
         val bottomNav = LinearLayout(this)
         bottomNav.orientation = LinearLayout.HORIZONTAL
         bottomNav.gravity = Gravity.CENTER
-        bottomNav.setBackgroundColor(Color.rgb(30, 30, 30))
+        bottomNav.setBackgroundColor(
+            if (isLightTheme) Color.WHITE else Color.rgb(30, 30, 30)
+        )
         bottomNav.setPadding(dp(5), dp(7), dp(5), dp(7))
 
         fun makeTab(icon: String, label: String, tabName: String): LinearLayout {
@@ -513,7 +554,12 @@ class MainActivity : Activity() {
             val tabBackground = GradientDrawable()
             tabBackground.cornerRadius = dp(18).toFloat()
             tabBackground.setColor(
-                if (selected) Color.rgb(75, 25, 30) else Color.TRANSPARENT
+                if (selected) {
+                    if (isLightTheme) Color.rgb(255, 235, 235)
+                    else Color.rgb(75, 25, 30)
+                } else {
+                    Color.TRANSPARENT
+                }
             )
             tab.background = tabBackground
 
@@ -521,14 +567,14 @@ class MainActivity : Activity() {
             iconView.text = icon
             iconView.textSize = 21f
             iconView.gravity = Gravity.CENTER
-            iconView.setTextColor(if (selected) gold else Color.LTGRAY)
+            iconView.setTextColor(if (selected) gold else secondaryText)
 
             val labelView = TextView(this)
             labelView.text = label
             labelView.textSize = 13f
             labelView.typeface = Typeface.DEFAULT_BOLD
             labelView.gravity = Gravity.CENTER
-            labelView.setTextColor(if (selected) gold else Color.LTGRAY)
+            labelView.setTextColor(if (selected) gold else secondaryText)
 
             tab.addView(iconView)
             tab.addView(labelView)
@@ -585,7 +631,7 @@ class MainActivity : Activity() {
         popup.show()
     }
 
-    // FAQJA E RE E CILËSIMEVE
+    // FAQJA E CILËSIMEVE
     private fun showSettingsPage() {
         val density = resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
@@ -594,7 +640,7 @@ class MainActivity : Activity() {
 
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        page.setBackgroundColor(Color.rgb(15, 15, 18))
+        page.setBackgroundColor(pageBackground)
 
         val header = LinearLayout(this)
         header.orientation = LinearLayout.HORIZONTAL
@@ -608,7 +654,11 @@ class MainActivity : Activity() {
         back.setTextColor(Color.WHITE)
         back.gravity = Gravity.CENTER
         header.addView(back, LinearLayout.LayoutParams(dp(45), dp(50)))
-        back.setOnClickListener { showHome("chats") }
+
+        // Kthehu te skeda ku ndodheshe më parë
+        back.setOnClickListener {
+            showHome(selectedHomeTab)
+        }
 
         val heading = TextView(this)
         heading.text = "CILËSIMET"
@@ -638,9 +688,13 @@ class MainActivity : Activity() {
             card.setPadding(dp(12), dp(5), dp(12), dp(5))
 
             val bg = GradientDrawable()
-            bg.setColor(Color.rgb(35, 35, 40))
+            bg.setColor(cardBackground)
             bg.cornerRadius = dp(16).toFloat()
-            bg.setStroke(dp(1), Color.rgb(75, 65, 60))
+            bg.setStroke(
+                dp(1),
+                if (isLightTheme) Color.rgb(220, 220, 225)
+                else Color.rgb(75, 65, 60)
+            )
             card.background = bg
 
             val params = LinearLayout.LayoutParams(-1, -2)
@@ -677,12 +731,12 @@ class MainActivity : Activity() {
             titleView.text = title
             titleView.textSize = 15f
             titleView.typeface = Typeface.DEFAULT_BOLD
-            titleView.setTextColor(Color.WHITE)
+            titleView.setTextColor(white)
 
             val descView = TextView(this)
             descView.text = description
             descView.textSize = 12f
-            descView.setTextColor(Color.LTGRAY)
+            descView.setTextColor(secondaryText)
             descView.setPadding(0, dp(4), 0, 0)
 
             texts.addView(titleView)
@@ -692,14 +746,17 @@ class MainActivity : Activity() {
             val arrow = TextView(this)
             arrow.text = "›"
             arrow.textSize = 28f
-            arrow.setTextColor(Color.LTGRAY)
+            arrow.setTextColor(secondaryText)
             row.addView(arrow)
 
             row.setOnClickListener { action() }
             card.addView(row)
 
             val divider = View(this)
-            divider.setBackgroundColor(Color.rgb(65, 65, 70))
+            divider.setBackgroundColor(
+                if (isLightTheme) Color.rgb(225, 225, 230)
+                else Color.rgb(65, 65, 70)
+            )
             card.addView(divider, LinearLayout.LayoutParams(-1, dp(1)))
         }
 
@@ -733,12 +790,12 @@ class MainActivity : Activity() {
         accountName.text = "CHAT SHQIPONJA"
         accountName.textSize = 16f
         accountName.typeface = Typeface.DEFAULT_BOLD
-        accountName.setTextColor(Color.WHITE)
+        accountName.setTextColor(white)
 
         val accountEmail = TextView(this)
         accountEmail.text = email
         accountEmail.textSize = 12f
-        accountEmail.setTextColor(Color.LTGRAY)
+        accountEmail.setTextColor(secondaryText)
         accountEmail.setPadding(0, dp(5), 0, 0)
 
         accountInfo.addView(accountName)
@@ -776,7 +833,7 @@ class MainActivity : Activity() {
             preferencesCard,
             "🌍",
             "Gjuha",
-            "Zgjidh gjuhën e preferuar"
+            "Gjuha aktuale: Shqip"
         ) { showLanguageSettings() }
 
         section("SIGURIA DHE TË DHËNAT")
@@ -849,7 +906,7 @@ class MainActivity : Activity() {
         val check = CheckBox(this)
         check.text = "Aktivizo njoftimet"
         check.textSize = 16f
-        check.setTextColor(Color.WHITE)
+        check.setTextColor(white)
         check.isChecked = enabled
         check.setPadding(15, 15, 15, 15)
 
@@ -885,39 +942,24 @@ class MainActivity : Activity() {
                     .apply()
 
                 dialog.dismiss()
-                toast("Preferenca e temës u ruajt.")
+                toast("Tema u ndryshua.")
                 showSettingsPage()
             }
             .setNegativeButton("MBYLL", null)
             .show()
     }
 
+    // Për momentin aplikacioni është në shqip.
+    // Gjuhët e tjera nuk shfaqen si të aktivizuara pa përkthimin e plotë.
     private fun showLanguageSettings() {
-        val prefs = getSharedPreferences("shqiponja_settings", MODE_PRIVATE)
-        val current = prefs.getString("language", "sq") ?: "sq"
-
-        val languages = arrayOf(
-            "Shqip",
-            "English",
-            "Italiano",
-            "Deutsch"
-        )
-
-        val codes = arrayOf("sq", "en", "it", "de")
-        val selected = codes.indexOf(current).coerceAtLeast(0)
-
         AlertDialog.Builder(this)
             .setTitle("🌍 Gjuha")
-            .setSingleChoiceItems(languages, selected) { dialog, which ->
-                prefs.edit()
-                    .putString("language", codes[which])
-                    .apply()
-
-                dialog.dismiss()
-                toast("Preferenca e gjuhës u ruajt.")
-                showSettingsPage()
-            }
-            .setNegativeButton("MBYLL", null)
+            .setMessage(
+                "Gjuha aktuale e aplikacionit është Shqip.\n\n" +
+                "Gjuhët e tjera do të aktivizohen kur të përfundojë " +
+                "përkthimi i të gjithë aplikacionit."
+            )
+            .setPositiveButton("NË RREGULL", null)
             .show()
     }
 
@@ -1103,7 +1145,10 @@ class MainActivity : Activity() {
                                     row.orientation = LinearLayout.HORIZONTAL
                                     row.gravity = Gravity.CENTER_VERTICAL
                                     row.setPadding(dp(12), dp(12), dp(12), dp(12))
-                                    row.setBackgroundColor(Color.rgb(38, 38, 38))
+                                    row.setBackgroundColor(
+                                        if (isLightTheme) Color.WHITE
+                                        else Color.rgb(38, 38, 38)
+                                    )
 
                                     val avatar = TextView(this)
                                     avatar.text = "🦅"
@@ -1133,7 +1178,7 @@ class MainActivity : Activity() {
                                     val preview = TextView(this)
                                     preview.text = lastMessage
                                     preview.textSize = 14f
-                                    preview.setTextColor(Color.LTGRAY)
+                                    preview.setTextColor(secondaryText)
                                     preview.maxLines = 1
                                     preview.ellipsize = android.text.TextUtils.TruncateAt.END
                                     preview.setPadding(0, dp(5), 0, 0)
@@ -1186,7 +1231,7 @@ class MainActivity : Activity() {
             "Këtu do të shfaqet historiku i telefonatave.\n\n" +
             "Për të telefonuar një kontakt, hap kategorinë Chats dhe zgjidh personin që dëshiron të telefonosh."
         description.textSize = 15f
-        description.setTextColor(Color.LTGRAY)
+        description.setTextColor(secondaryText)
         description.gravity = Gravity.CENTER
         description.setPadding(0, dp(8), 0, dp(20))
         page.addView(description)
@@ -1343,7 +1388,7 @@ class MainActivity : Activity() {
             }
     }
 
-    // FSHi NJË MESAZH
+    // FSHI NJË MESAZH
     private fun showMessageDeleteDialog(
         chatId: String,
         messageId: String,
@@ -1407,7 +1452,7 @@ class MainActivity : Activity() {
             .show()
     }
 
-    // FSHi GJITHË BISEDËN VETËM PËR VETE
+    // FSHI GJITHË BISEDËN VETËM PËR VETE
     private fun hideWholeChat(chatId: String) {
         val uid = auth.currentUser?.uid ?: return
 
@@ -1434,7 +1479,7 @@ class MainActivity : Activity() {
             .show()
     }
 
-    // FAQJA E BISEDES
+    // FAQJA E BISEDËS
     private fun showChat(
         chatId: String,
         otherUsername: String,
@@ -1453,7 +1498,7 @@ class MainActivity : Activity() {
 
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        page.setBackgroundColor(Color.rgb(12, 12, 15))
+        page.setBackgroundColor(pageBackground)
 
         val header = LinearLayout(this)
         header.orientation = LinearLayout.HORIZONTAL
@@ -1573,7 +1618,7 @@ class MainActivity : Activity() {
         header.addView(menuButton, LinearLayout.LayoutParams(dp(35), dp(48)))
 
         val conversation = FrameLayout(this)
-        conversation.setBackgroundColor(Color.rgb(14, 14, 18))
+        conversation.setBackgroundColor(pageBackground)
 
         val scrollView = ScrollView(this)
         scrollView.isFillViewport = true
@@ -1590,13 +1635,13 @@ class MainActivity : Activity() {
         inputPanel.orientation = LinearLayout.HORIZONTAL
         inputPanel.gravity = Gravity.CENTER_VERTICAL
         inputPanel.setPadding(dp(8), dp(9), dp(8), dp(9))
-        inputPanel.setBackgroundColor(Color.rgb(25, 25, 29))
+        inputPanel.setBackgroundColor(cardBackground)
 
         val emojiButton = TextView(this)
         emojiButton.text = "😊"
         emojiButton.textSize = 25f
         emojiButton.gravity = Gravity.CENTER
-        emojiButton.setTextColor(Color.WHITE)
+        emojiButton.setTextColor(white)
 
         val emojiParams = LinearLayout.LayoutParams(dp(42), dp(48))
         emojiParams.setMargins(0, 0, dp(5), 0)
@@ -1605,17 +1650,24 @@ class MainActivity : Activity() {
         val messageInput = EditText(this)
         messageInput.hint = "Mesazhe"
         messageInput.textSize = 15f
-        messageInput.setTextColor(Color.WHITE)
-        messageInput.setHintTextColor(Color.LTGRAY)
+        messageInput.setTextColor(white)
+        messageInput.setHintTextColor(secondaryText)
         messageInput.inputType =
             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         messageInput.maxLines = 4
         messageInput.setPadding(dp(14), dp(9), dp(14), dp(9))
 
         val inputBg = GradientDrawable()
-        inputBg.setColor(Color.rgb(45, 45, 50))
+        inputBg.setColor(
+            if (isLightTheme) Color.rgb(235, 235, 240)
+            else Color.rgb(45, 45, 50)
+        )
         inputBg.cornerRadius = dp(25).toFloat()
-        inputBg.setStroke(dp(1), Color.rgb(95, 75, 65))
+        inputBg.setStroke(
+            dp(1),
+            if (isLightTheme) Color.rgb(210, 210, 220)
+            else Color.rgb(95, 75, 65)
+        )
         messageInput.background = inputBg
 
         inputPanel.addView(messageInput, LinearLayout.LayoutParams(0, -2, 1f))
@@ -1624,7 +1676,7 @@ class MainActivity : Activity() {
         voiceButton.text = "🎤"
         voiceButton.textSize = 23f
         voiceButton.gravity = Gravity.CENTER
-        voiceButton.setTextColor(Color.WHITE)
+        voiceButton.setTextColor(white)
 
         val voiceButtonParams = LinearLayout.LayoutParams(dp(42), dp(48))
         voiceButtonParams.setMargins(dp(3), 0, 0, 0)
@@ -1634,7 +1686,7 @@ class MainActivity : Activity() {
         uploadButton.text = "📎"
         uploadButton.textSize = 24f
         uploadButton.gravity = Gravity.CENTER
-        uploadButton.setTextColor(Color.WHITE)
+        uploadButton.setTextColor(white)
 
         val uploadParams = LinearLayout.LayoutParams(dp(42), dp(48))
         uploadParams.setMargins(dp(2), 0, 0, 0)
@@ -1771,7 +1823,7 @@ class MainActivity : Activity() {
                     }
                     empty.textSize = 15f
                     empty.gravity = Gravity.CENTER
-                    empty.setTextColor(Color.LTGRAY)
+                    empty.setTextColor(secondaryText)
                     empty.setPadding(dp(20), dp(45), dp(20), dp(45))
                     messageList.addView(empty, LinearLayout.LayoutParams(-1, -2))
                 }
@@ -1799,8 +1851,15 @@ class MainActivity : Activity() {
                         bubbleBg.setColor(Color.rgb(145, 15, 30))
                         bubbleBg.setStroke(dp(1), Color.rgb(195, 115, 65))
                     } else {
-                        bubbleBg.setColor(Color.rgb(43, 43, 50))
-                        bubbleBg.setStroke(dp(1), Color.rgb(85, 75, 65))
+                        bubbleBg.setColor(
+                            if (isLightTheme) Color.rgb(235, 235, 240)
+                            else Color.rgb(43, 43, 50)
+                        )
+                        bubbleBg.setStroke(
+                            dp(1),
+                            if (isLightTheme) Color.rgb(215, 215, 225)
+                            else Color.rgb(85, 75, 65)
+                        )
                     }
                     bubbleBg.cornerRadius = dp(19).toFloat()
                     bubble.background = bubbleBg
@@ -1859,7 +1918,7 @@ class MainActivity : Activity() {
                             val textView = TextView(this)
                             textView.text = text
                             textView.textSize = 15.5f
-                            textView.setTextColor(Color.WHITE)
+                            textView.setTextColor(if (isMine) Color.WHITE else white)
                             textView.setPadding(dp(3), dp(2), dp(3), dp(2))
                             textView.maxWidth = dp(285)
                             bubble.addView(textView)
@@ -1885,7 +1944,7 @@ class MainActivity : Activity() {
                         ""
                     }
                     time.textSize = 10f
-                    time.setTextColor(Color.LTGRAY)
+                    time.setTextColor(secondaryText)
                     time.gravity = if (isMine) Gravity.END else Gravity.START
                     time.setPadding(dp(7), dp(1), dp(7), dp(2))
                     row.addView(time)
