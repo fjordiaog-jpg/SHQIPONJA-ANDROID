@@ -2376,18 +2376,19 @@ override fun onActivityResult(
             }
         }
 
-        3002 -> {
-            val mimeType = contentResolver.getType(uri) ?: ""
+        
+3002 -> {
+    val mimeType = contentResolver.getType(uri) ?: ""
 
-            if (mimeType.startsWith("image/") ||
-                mimeType.startsWith("video/")
-            ) {
-                uploadStatus(uri, mimeType)
-            } else {
-                toast("Zgjidh një foto ose video.")
-            }
-        }
+    if (mimeType.startsWith("image/") ||
+        mimeType.startsWith("video/")
+    ) {
+        uploadStatus(uri, mimeType)
+    } else {
+        toast("Zgjidh një foto ose video.")
     }
+}
+
 }
 
     private fun uploadMedia(uri: Uri, chatId: String, mimeType: String) {
@@ -2562,24 +2563,25 @@ private fun showStatusesPage(content: FrameLayout, uid: String?) {
     )
 
     
+
 fun openPicker() {
     try {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*"
-            putExtra(
-                Intent.EXTRA_MIME_TYPES,
-                arrayOf("image/*", "video/*")
-            )
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
-        startActivityForResult(intent, 3002)
+        startActivityForResult(
+            Intent.createChooser(intent, "Zgjidh fotografinë për status"),
+            3002
+        )
 
     } catch (e: Exception) {
         toast("Nuk u hap galeria: ${e.message}")
     }
 }
+
 
     fun openStatus(url: String, type: String) {
         try {
