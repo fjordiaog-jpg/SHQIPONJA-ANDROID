@@ -2350,6 +2350,19 @@ override fun onActivityResult(
         toast("Nuk u zgjodh asnjë skedar.")
         return
     }
+    
+3002 -> {
+    val mimeType = contentResolver.getType(uri) ?: ""
+
+    if (mimeType.startsWith("image/") ||
+        mimeType.startsWith("video/")
+    ) {
+        uploadStatus(uri, mimeType)
+    } else {
+        toast("Zgjidh një foto ose video.")
+    }
+}
+
 
     when (requestCode) {
         PICK_PROFILE_IMAGE -> {
