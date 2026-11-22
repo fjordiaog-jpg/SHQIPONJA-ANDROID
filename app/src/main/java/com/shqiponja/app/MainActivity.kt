@@ -2377,18 +2377,18 @@ override fun onActivityResult(
         }
 
         
-3002 -> {
-    val mimeType = contentResolver.getType(uri) ?: ""
+        3002 -> {
+            val mimeType = contentResolver.getType(uri) ?: ""
 
-    if (mimeType.startsWith("image/") ||
-        mimeType.startsWith("video/")
-    ) {
-        uploadStatus(uri, mimeType)
-    } else {
-        toast("Zgjidh një foto ose video.")
+            if (mimeType.startsWith("image/") ||
+                mimeType.startsWith("video/")
+            ) {
+                uploadStatus(uri, mimeType)
+            } else {
+                toast("Zgjidh një foto ose video.")
+            }
+        }
     }
-}
-
 }
 
     private fun uploadMedia(uri: Uri, chatId: String, mimeType: String) {
