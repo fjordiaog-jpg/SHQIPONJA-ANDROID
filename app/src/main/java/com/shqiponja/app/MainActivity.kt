@@ -2561,15 +2561,25 @@ private fun showStatusesPage(content: FrameLayout, uid: String?) {
         )
     )
 
-    fun openPicker() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "*/*"
-        intent.putExtra(
-            Intent.EXTRA_MIME_TYPES,
-            arrayOf("image/*", "video/*")
-        )
+    
+fun openPicker() {
+    try {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf("image/*", "video/*")
+            )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
         startActivityForResult(intent, 3002)
+
+    } catch (e: Exception) {
+        toast("Nuk u hap galeria: ${e.message}")
     }
+}
 
     fun openStatus(url: String, type: String) {
         try {
