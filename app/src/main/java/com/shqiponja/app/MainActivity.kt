@@ -1064,7 +1064,7 @@ class MainActivity : Activity() {
         inputCard.addView(input)
         inputCard.addView(attachBtn)
 
-        val actionBtn = TextView(this).apply {
+     var actionBtn = TextView(this).apply {
             text = "🎤"
             textSize = 20f
             setTextColor(Color.WHITE)
