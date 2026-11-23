@@ -8,8 +8,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -18,7 +16,6 @@ import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.text.InputType
 import android.text.TextUtils
 import android.view.Gravity
@@ -30,7 +27,6 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
 import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
@@ -1064,7 +1060,7 @@ class MainActivity : Activity() {
         inputCard.addView(input)
         inputCard.addView(attachBtn)
 
-     var actionBtn = TextView(this).apply {
+        val actionBtn = TextView(this).apply {
             text = "🎤"
             textSize = 20f
             setTextColor(Color.WHITE)
@@ -1079,7 +1075,7 @@ class MainActivity : Activity() {
         input.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                actionBtn.text = if (s.isNullOrBlank()) "🎤" else "➤"
+                actionBtn.setText(if (s.isNullOrBlank()) "🎤" else "➤")
             }
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
@@ -1143,7 +1139,7 @@ class MainActivity : Activity() {
                     start()
                 }
                 isRecording = true
-                btn.text = "⏹"
+                btn.setText("⏹")
                 toast("Duke regjistruar zërin... Shtyp përsëri për ta dërguar.")
             } catch (e: Throwable) {
                 isRecording = false
@@ -1155,14 +1151,14 @@ class MainActivity : Activity() {
                 mediaRecorder?.release()
                 mediaRecorder = null
                 isRecording = false
-                btn.text = "🎤"
+                btn.setText("🎤")
 
                 val file = recordingFile ?: return
                 val targetChat = recordingChatId ?: return
                 uploadVoiceFile(targetChat, file)
             } catch (e: Throwable) {
                 isRecording = false
-                btn.text = "🎤"
+                btn.setText("🎤")
                 toast("Gabim ndalimi: ${e.message}")
             }
         }
