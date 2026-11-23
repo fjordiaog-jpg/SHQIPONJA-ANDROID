@@ -512,24 +512,28 @@ private fun showHome(tab: String = selectedHomeTab) {
     val density = resources.displayMetrics.density
     fun dp(value: Int): Int = (value * density).toInt()
 
-    val layout = LinearLayout(this)
-    layout.orientation = LinearLayout.VERTICAL
-    layout.setBackgroundColor(Color.WHITE)
-
     val header = LinearLayout(this)
-    header.orientation = LinearLayout.HORIZONTAL
-    header.gravity = Gravity.CENTER_VERTICAL
-    header.setPadding(dp(16), dp(8), dp(12), dp(8))
-    header.setBackgroundColor(red)
+header.orientation = LinearLayout.HORIZONTAL
+header.gravity = Gravity.CENTER_VERTICAL
+header.setPadding(dp(12), dp(8), dp(12), dp(8))
+header.setBackgroundColor(Color.BLACK)
 
-    val title = TextView(this)
-    title.text = "CHAT SHQIPONJA"
-    title.textSize = 22f
-    title.typeface = Typeface.DEFAULT_BOLD
-    title.setTextColor(Color.WHITE)
-    title.gravity = Gravity.CENTER_VERTICAL
-    header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
+val logoImage = ImageView(this)
+logoImage.setImageResource(R.drawable.shqiponja_logo)
+logoImage.scaleType = ImageView.ScaleType.FIT_CENTER
 
+val logoParams = LinearLayout.LayoutParams(dp(52), dp(52))
+logoParams.setMargins(0, 0, dp(10), 0)
+header.addView(logoImage, logoParams)
+
+val title = TextView(this)
+title.text = "SHQIPONJA"
+title.textSize = 23f
+title.typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
+title.setTextColor(Color.RED)
+title.gravity = Gravity.CENTER_VERTICAL
+
+header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
     val settingsButton = TextView(this)
     settingsButton.text = "⋮"
     settingsButton.textSize = 34f
