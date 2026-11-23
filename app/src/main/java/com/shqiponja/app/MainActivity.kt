@@ -1357,19 +1357,28 @@ private fun showChatsPage(content: FrameLayout, uid: String?) {
                                     )
                                 )
 
-                                // ORA E MESAZHIT
-                                val time = TextView(this)
-                                val timestamp =
-                                    lastDocument?.getTimestamp("createdAt")
+                                
+// ORA E MESAZHIT
+val time = TextView(this)
 
-                                time.text = if (timestamp != null) {
-                                    java.text.SimpleDateFormat(
-                                        "HH:mm",
-                                        java.util.Locale.getDefault()
-                                    ).format(timestamp.toDate())
-                                } else {
-                                    ""
-                                }
+val timestampValue = lastDocument?.get("createdAt")
+
+val date = when (timestampValue) {
+    is com.google.firebase.Timestamp -> timestampValue.toDate()
+    is java.util.Date -> timestampValue
+    is Long -> java.util.Date(timestampValue)
+    else -> null
+}
+
+time.text = if (date != null) {
+    java.text.SimpleDateFormat(
+        "HH:mm",
+        java.util.Locale.getDefault()
+    ).format(date)
+} else {
+    ""
+}
+
 
                                 time.textSize = 12f
                                 time.setTextColor(gray)
