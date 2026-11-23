@@ -1043,68 +1043,171 @@ header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
             .show()
     }
 
+
+
 private fun showChatsPage(content: FrameLayout, uid: String?) {
     val density = resources.displayMetrics.density
     fun dp(value: Int): Int = (value * density).toInt()
 
+    val black = Color.BLACK
+    val white = Color.WHITE
+    val gray = Color.rgb(170, 170, 170)
+    val green = Color.rgb(0, 168, 132)
+    val dark = Color.rgb(30, 30, 30)
+
     val page = FrameLayout(this)
-    page.setBackgroundColor(Color.WHITE)
+    page.setBackgroundColor(black)
 
     val mainLayout = LinearLayout(this)
     mainLayout.orientation = LinearLayout.VERTICAL
-    mainLayout.setBackgroundColor(Color.WHITE)
+    mainLayout.setBackgroundColor(black)
 
-    val subtitle = TextView(this)
-    subtitle.text = "BISEDAT E MIA"
-    subtitle.textSize = 17f
-    subtitle.typeface = Typeface.DEFAULT_BOLD
-    subtitle.setTextColor(Color.BLACK)
-    subtitle.gravity = Gravity.CENTER_VERTICAL
-    subtitle.setPadding(dp(16), dp(12), dp(10), dp(12))
+    // TITULLI
+    val title = TextView(this)
+    title.text = "Bisedat"
+    title.textSize = 24f
+    title.typeface = Typeface.DEFAULT_BOLD
+    title.setTextColor(white)
+    title.gravity = Gravity.CENTER_VERTICAL
+    title.setPadding(dp(16), dp(8), dp(16), dp(8))
 
-    mainLayout.addView(subtitle, LinearLayout.LayoutParams(-1, dp(48)))
+    mainLayout.addView(title, LinearLayout.LayoutParams(-1, dp(55)))
 
+    // KERKIMI
+    val searchBox = LinearLayout(this)
+    searchBox.orientation = LinearLayout.HORIZONTAL
+    searchBox.gravity = Gravity.CENTER_VERTICAL
+    searchBox.setPadding(dp(14), 0, dp(14), 0)
+
+    val searchBackground = GradientDrawable()
+    searchBackground.shape = GradientDrawable.RECTANGLE
+    searchBackground.cornerRadius = dp(30).toFloat()
+    searchBackground.setColor(dark)
+    searchBox.background = searchBackground
+
+    val searchIcon = TextView(this)
+    searchIcon.text = "⌕"
+    searchIcon.textSize = 30f
+    searchIcon.setTextColor(gray)
+    searchIcon.gravity = Gravity.CENTER
+
+    searchBox.addView(searchIcon, LinearLayout.LayoutParams(dp(35), -1))
+
+    val searchInput = android.widget.EditText(this)
+    searchInput.hint = "Kërko biseda..."
+    searchInput.setHintTextColor(gray)
+    searchInput.setTextColor(white)
+    searchInput.textSize = 16f
+    searchInput.singleLine = true
+    searchInput.setPadding(dp(8), 0, dp(8), 0)
+    searchInput.background = null
+
+    searchBox.addView(
+        searchInput,
+        LinearLayout.LayoutParams(0, dp(48), 1f)
+    )
+
+    val searchParams = LinearLayout.LayoutParams(-1, dp(50))
+    searchParams.setMargins(dp(14), dp(5), dp(14), dp(15))
+    mainLayout.addView(searchBox, searchParams)
+
+    // TITULLI I LISTES
+    val sectionTitle = TextView(this)
+    sectionTitle.text = "Të gjitha bisedat"
+    sectionTitle.textSize = 16f
+    sectionTitle.typeface = Typeface.DEFAULT_BOLD
+    sectionTitle.setTextColor(white)
+    sectionTitle.setPadding(dp(16), dp(5), dp(10), dp(10))
+
+    mainLayout.addView(sectionTitle)
+
+    // LISTA E BISEDAVE
     val scroll = ScrollView(this)
+    scroll.isFillViewport = true
+
     val chatList = LinearLayout(this)
     chatList.orientation = LinearLayout.VERTICAL
-    chatList.setPadding(dp(10), dp(5), dp(10), dp(80))
-    scroll.addView(chatList)
+    chatList.setPadding(dp(8), dp(4), dp(8), dp(85))
+    chatList.setBackgroundColor(black)
 
-    mainLayout.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+    scroll.addView(chatList)
+    mainLayout.addView(
+        scroll,
+        LinearLayout.LayoutParams(-1, 0, 1f)
+    )
+
+    // KERKIMI FILTRON KONTAKTET
+    searchInput.addTextChangedListener(
+        object : android.text.TextWatcher {
+            override fun beforeTextChanged(
+                s: CharSequence?, start: Int, count: Int, after: Int
+            ) {}
+
+            override fun onTextChanged(
+                s: CharSequence?, start: Int, before: Int, count: Int
+            ) {
+                val query = s.toString().trim().lowercase()
+
+                for (i in 0 until chatList.childCount) {
+                    val item = chatList.getChildAt(i)
+                    val searchable = item.tag as? String
+
+                    item.visibility = if (
+                        searchable == null || searchable.contains(query)
+                    ) View.VISIBLE else View.GONE
+                }
+            }
+
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        }
+    )
+
     page.addView(mainLayout, FrameLayout.LayoutParams(-1, -1))
 
+    // BUTONI BISED E RE
     val plusButton = TextView(this)
     plusButton.text = "+"
-    plusButton.textSize = 31f
+    plusButton.textSize = 34f
     plusButton.typeface = Typeface.DEFAULT_BOLD
-    plusButton.setTextColor(Color.WHITE)
+    plusButton.setTextColor(white)
     plusButton.gravity = Gravity.CENTER
     plusButton.includeFontPadding = false
 
     val plusBackground = GradientDrawable()
     plusBackground.shape = GradientDrawable.OVAL
-    plusBackground.setColor(red)
+    plusBackground.setColor(green)
     plusButton.background = plusBackground
-    plusButton.elevation = dp(8).toFloat()
+    plusButton.elevation = dp(7).toFloat()
 
     plusButton.setOnClickListener {
         askUsername()
     }
 
     val plusParams = FrameLayout.LayoutParams(
-        dp(52), dp(52), Gravity.BOTTOM or Gravity.END
+        dp(58), dp(58), Gravity.BOTTOM or Gravity.END
     )
-    plusParams.setMargins(0, 0, dp(18), dp(20))
+    plusParams.setMargins(0, 0, dp(20), dp(18))
     page.addView(plusButton, plusParams)
 
     content.addView(page, FrameLayout.LayoutParams(-1, -1))
 
+    // STATUS
+    fun addStatus(message: String) {
+        val label = TextView(this)
+        label.text = message
+        label.textSize = 15f
+        label.setTextColor(gray)
+        label.gravity = Gravity.CENTER
+        label.setPadding(dp(15), dp(30), dp(15), dp(30))
+        chatList.addView(label)
+    }
+
     if (uid == null) {
-        chatList.addView(makeLabel("Hyr në llogari për të përdorur bisedat."))
+        addStatus("Hyr në llogari për të përdorur bisedat.")
         return
     }
 
-    chatList.addView(makeLabel("Po ngarkohen bisedat..."))
+    addStatus("Po ngarkohen bisedat...")
 
     chatsListener = db.collection("chats")
         .whereArrayContains("participants", uid)
@@ -1126,9 +1229,7 @@ private fun showChatsPage(content: FrameLayout, uid: String?) {
             }
 
             if (visibleDocuments.isEmpty()) {
-                chatList.addView(
-                    makeLabel("Nuk ke ende biseda.\n\nShtyp + për të kërkuar kontakte! 🦅")
-                )
+                addStatus("Nuk ke ende biseda.\n\nShtyp + për të kërkuar kontakte!")
                 return@addSnapshotListener
             }
 
@@ -1143,103 +1244,190 @@ private fun showChatsPage(content: FrameLayout, uid: String?) {
                 db.collection("users").document(otherUid).get()
                     .addOnSuccessListener { userDocument ->
 
-                        val username = userDocument.getString("username") ?: "Përdorues"
+                        val username =
+                            userDocument.getString("username") ?: "Përdorues"
 
                         db.collection("chats")
                             .document(document.id)
                             .collection("messages")
-                            .orderBy("createdAt", Query.Direction.DESCENDING)
+                            .orderBy(
+                                "createdAt",
+                                Query.Direction.DESCENDING
+                            )
                             .get()
                             .addOnSuccessListener { messages ->
 
-                                val lastDocument = messages.documents.firstOrNull { msg ->
-                                    val hiddenFor = msg.get("hiddenFor") as? List<*>
-                                        ?: emptyList<Any>()
-                                    !hiddenFor.contains(uid)
-                                }
+                                val lastDocument =
+                                    messages.documents.firstOrNull { msg ->
+                                        val hiddenFor =
+                                            msg.get("hiddenFor") as? List<*>
+                                                ?: emptyList<Any>()
+                                        !hiddenFor.contains(uid)
+                                    }
 
-                                val lastType = lastDocument?.getString("type") ?: "text"
+                                val lastType =
+                                    lastDocument?.getString("type") ?: "text"
 
                                 val lastMessage = when (lastType) {
                                     "audio" -> "🎤 Mesazh zanor"
                                     "image" -> "🖼️ Foto"
                                     "video" -> "🎥 Video"
-                                    else -> lastDocument?.getString("text") ?: "Fillo bisedën"
+                                    else -> lastDocument?.getString("text")
+                                        ?: "Fillo bisedën"
                                 }
+
+                                // KONTAKTI
+                                val item = LinearLayout(this)
+                                item.orientation = LinearLayout.VERTICAL
+                                item.setBackgroundColor(black)
+                                item.tag =
+                                    "$username $lastMessage".lowercase()
 
                                 val row = LinearLayout(this)
                                 row.orientation = LinearLayout.HORIZONTAL
                                 row.gravity = Gravity.CENTER_VERTICAL
-                                row.setPadding(dp(12), dp(12), dp(12), dp(12))
-                                row.setBackgroundColor(Color.WHITE)
+                                row.setPadding(
+                                    dp(10), dp(12), dp(10), dp(12)
+                                )
+                                row.setBackgroundColor(black)
 
+                                // FOTO E KONTAKTIT
                                 val avatar = ImageView(this)
-avatar.scaleType = ImageView.ScaleType.CENTER_CROP
-avatar.setImageResource(android.R.drawable.ic_menu_myplaces)
+                                avatar.scaleType =
+                                    ImageView.ScaleType.CENTER_CROP
+                                avatar.setImageResource(
+                                    android.R.drawable.ic_menu_myplaces
+                                )
 
-val avatarBackground = GradientDrawable()
-avatarBackground.shape = GradientDrawable.OVAL
-avatarBackground.setColor(Color.rgb(110, 15, 25))
-avatarBackground.setStroke(dp(2), gold)
+                                val avatarBackground = GradientDrawable()
+                                avatarBackground.shape =
+                                    GradientDrawable.OVAL
+                                avatarBackground.setColor(
+                                    Color.rgb(45, 45, 45)
+                                )
+                                avatarBackground.setStroke(dp(1), dark)
 
-avatar.background = avatarBackground
-avatar.clipToOutline = true
+                                avatar.background = avatarBackground
+                                avatar.clipToOutline = true
 
-val photoUrl = userDocument.getString("photoUrl")
+                                val photoUrl =
+                                    userDocument.getString("photoUrl")
 
-if (!photoUrl.isNullOrBlank()) {
-    loadImage(photoUrl, avatar)
-}
+                                if (!photoUrl.isNullOrBlank()) {
+                                    loadImage(photoUrl, avatar)
+                                }
 
-val avatarParams = LinearLayout.LayoutParams(dp(56), dp(56))
-avatarParams.setMargins(0, 0, dp(14), 0)
-row.addView(avatar, avatarParams)
+                                val avatarParams =
+                                    LinearLayout.LayoutParams(
+                                        dp(60), dp(60)
+                                    )
+                                avatarParams.setMargins(
+                                    0, 0, dp(13), 0
+                                )
+                                row.addView(avatar, avatarParams)
 
+                                // EMRI DHE MESAZHI
                                 val textLayout = LinearLayout(this)
-                                textLayout.orientation = LinearLayout.VERTICAL
+                                textLayout.orientation =
+                                    LinearLayout.VERTICAL
 
                                 val name = TextView(this)
                                 name.text = "@$username"
-                                name.textSize = 18f
+                                name.textSize = 17f
                                 name.typeface = Typeface.DEFAULT_BOLD
-                                name.setTextColor(Color.BLACK)
+                                name.setTextColor(white)
                                 name.maxLines = 1
 
                                 val preview = TextView(this)
                                 preview.text = lastMessage
                                 preview.textSize = 14f
-                                preview.setTextColor(Color.DKGRAY)
+                                preview.setTextColor(gray)
                                 preview.maxLines = 1
-                                preview.ellipsize = android.text.TextUtils.TruncateAt.END
+                                preview.ellipsize =
+                                    android.text.TextUtils.TruncateAt.END
                                 preview.setPadding(0, dp(5), 0, 0)
 
                                 textLayout.addView(name)
                                 textLayout.addView(preview)
-                                row.addView(textLayout, LinearLayout.LayoutParams(0, -2, 1f))
 
-                                val params = LinearLayout.LayoutParams(-1, -2)
-                                params.setMargins(dp(3), dp(5), dp(3), dp(5))
+                                row.addView(
+                                    textLayout,
+                                    LinearLayout.LayoutParams(
+                                        0, -2, 1f
+                                    )
+                                )
 
-                                row.setOnClickListener {
-                                    showChat(document.id, username, otherUid)
+                                // ORA E MESAZHIT
+                                val time = TextView(this)
+                                val timestamp =
+                                    lastDocument?.getTimestamp("createdAt")
+
+                                time.text = if (timestamp != null) {
+                                    java.text.SimpleDateFormat(
+                                        "HH:mm",
+                                        java.util.Locale.getDefault()
+                                    ).format(timestamp.toDate())
+                                } else {
+                                    ""
                                 }
 
-                                chatList.addView(row, params)
+                                time.textSize = 12f
+                                time.setTextColor(gray)
+                                time.gravity = Gravity.TOP or Gravity.END
 
-val divider = View(this)
-divider.setBackgroundColor(Color.rgb(230, 230, 230))
+                                row.addView(
+                                    time,
+                                    LinearLayout.LayoutParams(
+                                        dp(48), -2
+                                    )
+                                )
 
-val dividerParams = LinearLayout.LayoutParams(
-    -1, dp(1)
-)
-dividerParams.setMargins(dp(82), 0, dp(5), 0)
+                                row.setOnClickListener {
+                                    showChat(
+                                        document.id,
+                                        username,
+                                        otherUid
+                                    )
+                                }
 
-chatList.addView(divider, dividerParams)
+                                item.addView(
+                                    row,
+                                    LinearLayout.LayoutParams(-1, -2)
+                                )
+
+                                // VIJA NDARESE
+                                val divider = View(this)
+                                divider.setBackgroundColor(
+                                    Color.rgb(38, 38, 38)
+                                )
+
+                                val dividerParams =
+                                    LinearLayout.LayoutParams(-1, dp(1))
+                                dividerParams.setMargins(
+                                    dp(82), 0, dp(5), 0
+                                )
+
+                                item.addView(divider, dividerParams)
+
+                                chatList.addView(
+                                    item,
+                                    LinearLayout.LayoutParams(-1, -2)
+                                )
+
+                                // RUAN FILTRIMIN PAS NGARKIMIT
+                                val query = searchInput.text.toString()
+                                    .trim().lowercase()
+
+                                item.visibility = if (
+                                    item.tag.toString().contains(query)
+                                ) View.VISIBLE else View.GONE
                             }
                     }
             }
         }
 }
+
+
 
     private fun showCallsPage(content: FrameLayout) {
         val density = resources.displayMetrics.density
