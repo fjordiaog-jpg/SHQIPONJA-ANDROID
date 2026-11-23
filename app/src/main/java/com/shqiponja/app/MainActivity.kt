@@ -502,6 +502,9 @@ private fun chooseProfilePhoto() {
     
 private fun showHome(tab: String = selectedHomeTab) {
     selectedHomeTab = tab
+        val layout = LinearLayout(this)
+    layout.orientation = LinearLayout.VERTICAL
+    layout.setBackgroundColor(Color.WHITE)
 
     messagesListener?.remove()
     messagesListener = null
