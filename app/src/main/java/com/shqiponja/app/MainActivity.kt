@@ -1098,7 +1098,7 @@ private fun showChatsPage(content: FrameLayout, uid: String?) {
     searchInput.setHintTextColor(gray)
     searchInput.setTextColor(white)
     searchInput.textSize = 16f
-    searchInput.singleLine = true
+   searchInput.setSingleLine(true)
     searchInput.setPadding(dp(8), 0, dp(8), 0)
     searchInput.background = null
 
