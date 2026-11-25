@@ -23,11 +23,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+
       - name: Generate Debug Keystore
         run: |
-          mkdir -p ~/.android
+          mkdir -p ~/.config/.android
           keytool -genkeypair -v \
-            -keystore ~/.android/debug.keystore \
+            -keystore ~/.config/.android/debug.keystore \
             -storepass android \
             -alias AndroidDebugKey \
             -keypass android \
@@ -35,6 +36,7 @@ jobs:
             -keysize 2048 \
             -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
+
 
       - name: Show SHA fingerprints
         run: gradle :app:signingReport
