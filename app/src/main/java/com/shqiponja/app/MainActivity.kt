@@ -966,7 +966,7 @@ class MainActivity : Activity() {
                     when (type) {
                         "audio" -> {
                             val playBtn = TextView(this).apply {
-                                text = "▶️ Dëgjo mesazhin zanor"
+                                this.text = "▶️ Dëgjo mesazhin zanor"
                                 textSize = 15f
                                 setTextColor(primaryText)
                                 typeface = Typeface.DEFAULT_BOLD
@@ -978,7 +978,7 @@ class MainActivity : Activity() {
                         }
                         "image" -> {
                             val imgLabel = TextView(this).apply {
-                                text = "🖼️ Foto e dërguar (Kliko për ta hapur)"
+                                this.text = "🖼️ Foto e dërguar (Kliko për ta hapur)"
                                 textSize = 15f
                                 setTextColor(waTealGreen)
                                 typeface = Typeface.DEFAULT_BOLD
