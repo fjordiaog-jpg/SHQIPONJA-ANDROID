@@ -23,6 +23,9 @@ import android.view.View
 import android.widget.*
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.PhoneAuthOptions
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -37,6 +40,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 class MainActivity : Activity() {
 
@@ -99,6 +103,9 @@ class MainActivity : Activity() {
 
     private var mediaPlayer: MediaPlayer? = null
     private var pendingUploadChatId: String? = null
+    private var replyMessageId: String? = null
+    private var replyMessageText: String? = null
+    private var phoneVerificationInProgress = false
 
     // ---------------------------------------------------------
     // 1. CRASH LOGGER DHE REGJISTRIMI I GABIMEVE
@@ -1303,6 +1310,38 @@ class MainActivity : Activity() {
         topBar.addView(avatar)
         topBar.addView(titleCol)
 
+        val messageSearchBtn = TextView(this).apply {
+            text = "⌕"
+            textSize = 25f
+            setTextColor(Color.WHITE)
+            setPadding(dp(8), 0, dp(8), 0)
+            setOnClickListener {
+                val searchInput = EditText(this@MainActivity).apply { hint = "Kërko në këtë bisedë" }
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Kërko mesazhe")
+                    .setView(searchInput)
+                    .setPositiveButton("KËRKO") { _, _ ->
+                        val term = searchInput.text.toString().trim()
+                        if (term.isNotEmpty()) {
+                            db.collection("chats").document(chatId).collection("messages")
+                                .get().addOnSuccessListener { result ->
+                                    val matches = result.documents.filter {
+                                        (it.getString("text") ?: "").contains(term, ignoreCase = true)
+                                    }
+                                    if (matches.isEmpty()) toast("Nuk u gjet asnjë mesazh.")
+                                    else {
+                                        val lines = matches.map { "• ${it.getString("text") ?: ""}" }.toTypedArray()
+                                        AlertDialog.Builder(this@MainActivity).setTitle("Rezultatet (${matches.size})")
+                                            .setItems(lines, null).setPositiveButton("MBYLL", null).show()
+                                    }
+                                }.addOnFailureListener { toast("Kërkimi dështoi: ${it.message}") }
+                        }
+                    }
+                    .setNegativeButton("ANULO", null).show()
+            }
+        }
+        topBar.addView(messageSearchBtn)
+
         if (otherUserId.isNotBlank() && otherUserId != auth.currentUser?.uid) {
             topBar.addView(createCallButton(otherUserId, otherUsername, video = true))
             topBar.addView(createCallButton(otherUserId, otherUsername, video = false))
@@ -1320,6 +1359,34 @@ class MainActivity : Activity() {
         }
         scroll.addView(messagesContainer)
         root.addView(scroll)
+
+        // Shiriti i përgjigjes shfaqet kur përdoruesi zgjedh Përgjigju.
+        val replyBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(5), dp(12), dp(5))
+            setBackgroundColor(cardBackground)
+            visibility = View.GONE
+        }
+        val replyLabel = TextView(this).apply {
+            textSize = 13f
+            setTextColor(primaryText)
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+        }
+        val cancelReply = TextView(this).apply {
+            text = "✕"
+            textSize = 18f
+            setTextColor(secondaryText)
+            setPadding(dp(12), dp(4), dp(4), dp(4))
+            setOnClickListener {
+                replyMessageId = null
+                replyMessageText = null
+                replyBar.visibility = View.GONE
+            }
+        }
+        replyBar.addView(replyLabel)
+        replyBar.addView(cancelReply)
+        root.addView(replyBar)
 
         val currentUid = auth.currentUser?.uid ?: ""
 
@@ -1386,7 +1453,7 @@ class MainActivity : Activity() {
                         }
                         else -> {
                             val msgTv = TextView(this).apply {
-                                this.text = text
+                                this.text = if (doc.getBoolean("edited") == true) "$text  (i modifikuar)" else text
                                 textSize = 16f
                                 setTextColor(primaryText)
                             }
@@ -1403,12 +1470,69 @@ class MainActivity : Activity() {
                     }
                     bubble.addView(timeTv)
 
+                    val quotedText = doc.getString("replyText")
+                    if (!quotedText.isNullOrBlank()) {
+                        val quote = TextView(this).apply {
+                            text = "↪ $quotedText"
+                            textSize = 12f
+                            setTextColor(secondaryText)
+                            setPadding(0, dp(3), 0, 0)
+                            maxLines = 2
+                        }
+                        bubble.addView(quote, 0)
+                    }
+
+                    bubble.setOnLongClickListener {
+                        val choices = if (isMine) arrayOf("Përgjigju", "Modifiko", "Fshi") else arrayOf("Përgjigju")
+                        AlertDialog.Builder(this@MainActivity)
+                            .setItems(choices) { _, which ->
+                                val action = choices[which]
+                                when (action) {
+                                    "Përgjigju" -> {
+                                        replyMessageId = doc.id
+                                        replyMessageText = text.ifBlank { if (type == "image") "Foto" else "Mesazh zanor" }
+                                        replyLabel.text = "Përgjigje: ${replyMessageText}"
+                                        replyBar.visibility = View.VISIBLE
+                                    }
+                                    "Modifiko" -> {
+                                        if (type != "text") {
+                                            toast("Mund të modifikohen vetëm mesazhet tekst.")
+                                        } else {
+                                            val editInput = EditText(this@MainActivity).apply { setText(text) }
+                                            AlertDialog.Builder(this@MainActivity).setTitle("Modifiko mesazhin")
+                                                .setView(editInput)
+                                                .setPositiveButton("RUAJ") { _, _ ->
+                                                    val updated = editInput.text.toString().trim()
+                                                    if (updated.isNotEmpty()) {
+                                                        db.collection("chats").document(chatId).collection("messages")
+                                                            .document(doc.id).update("text", updated, "edited", true)
+                                                            .addOnSuccessListener { toast("Mesazhi u modifikua.") }
+                                                            .addOnFailureListener { toast("Nuk u modifikua: ${it.message}") }
+                                                    }
+                                                }.setNegativeButton("ANULO", null).show()
+                                        }
+                                    }
+                                    "Fshi" -> {
+                                        AlertDialog.Builder(this@MainActivity).setMessage("Ta fshijmë këtë mesazh?")
+                                            .setPositiveButton("FSHI") { _, _ ->
+                                                db.collection("chats").document(chatId).collection("messages")
+                                                    .document(doc.id).delete()
+                                                    .addOnSuccessListener { toast("Mesazhi u fshi.") }
+                                                    .addOnFailureListener { toast("Nuk u fshi: ${it.message}") }
+                                            }.setNegativeButton("ANULO", null).show()
+                                    }
+                                }
+                            }.show()
+                        true
+                    }
+
                     rowWrapper.addView(bubble)
                     messagesContainer.addView(rowWrapper)
                 }
 
                 scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
             }
+
 
         // SHIRITI I SHKRIMIT POSHTË (WHATSAPP INPUT BAR: FOTO + TEKST + MIC/DËRGO)
         val bottomBar = LinearLayout(this).apply {
@@ -1478,7 +1602,10 @@ class MainActivity : Activity() {
             val msgText = input.text.toString().trim()
             if (msgText.isNotEmpty()) {
                 input.setText("")
-                sendTextMessage(chatId, msgText)
+                sendTextMessage(chatId, msgText, replyMessageId, replyMessageText)
+                replyMessageId = null
+                replyMessageText = null
+                replyBar.visibility = View.GONE
             } else {
                 toggleVoiceRecording(chatId, actionBtn)
             }
@@ -1491,14 +1618,23 @@ class MainActivity : Activity() {
         setContentView(root)
     }
 
-    private fun sendTextMessage(chatId: String, text: String) {
+    private fun sendTextMessage(
+        chatId: String,
+        text: String,
+        replyToId: String? = null,
+        replyToText: String? = null
+    ) {
         val currentUid = auth.currentUser?.uid ?: return
-        val msgData = hashMapOf(
+        val msgData = hashMapOf<String, Any>(
             "senderId" to currentUid,
             "text" to text,
             "type" to "text",
             "createdAt" to FieldValue.serverTimestamp()
         )
+        if (!replyToId.isNullOrBlank() && !replyToText.isNullOrBlank()) {
+            msgData["replyToId"] = replyToId
+            msgData["replyText"] = replyToText
+        }
         db.collection("chats").document(chatId).collection("messages").add(msgData)
         db.collection("chats").document(chatId).update(
             mapOf(
@@ -1690,6 +1826,179 @@ class MainActivity : Activity() {
         }
         layout.addView(uidTv)
 
+        val phoneStatus = TextView(this).apply {
+            text = if (user?.phoneNumber.isNullOrBlank()) "Numri i telefonit: Nuk është lidhur" else "Numri i telefonit: ${user?.phoneNumber}"
+            textSize = 14f
+            setTextColor(secondaryText)
+            setPadding(0, dp(10), 0, dp(12))
+        }
+        layout.addView(phoneStatus)
+
+        val linkPhoneButton = Button(this).apply {
+            text = if (user?.phoneNumber.isNullOrBlank()) "LIDH NUMRIN E TELEFONIT" else "PËRDITËSO NUMRIN E TELEFONIT"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply {
+                setColor(waTealGreen)
+                cornerRadius = dp(24).toFloat()
+            }
+            setOnClickListener { startPhoneLinkFlow() }
+        }
+        layout.addView(linkPhoneButton, LinearLayout.LayoutParams(-1, dp(50)).apply {
+            setMargins(0, dp(8), 0, dp(12))
+        })
+
+        val phoneInfo = TextView(this).apply {
+            text = "Lidhja e numrit ruan të njëjtën llogari dhe ID. Mos krijo llogari të re."
+            textSize = 12f
+            setTextColor(secondaryText)
+            gravity = Gravity.CENTER
+        }
+        layout.addView(phoneInfo)
+
         container.addView(layout)
+    }
+
+    // Lidh numrin me llogarinë ekzistuese. UID dhe bisedat nuk ndryshohen.
+    private fun startPhoneLinkFlow() {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            toast("Së pari futu me llogarinë tënde ekzistuese.")
+            showLogin()
+            return
+        }
+        if (currentUser.isAnonymous) {
+            toast("Llogaritë vizitor nuk mund të lidhen me këtë proces. Së pari përdor llogarinë tënde email.")
+            return
+        }
+
+        val phoneInput = EditText(this).apply {
+            hint = "+3556XXXXXXXX"
+            inputType = android.text.InputType.TYPE_CLASS_PHONE
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Lidh numrin e telefonit")
+            .setMessage("Shkruaj numrin me prefiksin e shtetit, p.sh. +355...")
+            .setView(phoneInput)
+            .setNegativeButton("ANULO", null)
+            .setPositiveButton("DËRGO KODIN", null)
+            .create().also { dialog ->
+                dialog.setOnShowListener {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val phone = phoneInput.text.toString().trim().replace(" ", "")
+                        if (!phone.matches(Regex("^\\+[1-9][0-9]{7,14}$"))) {
+                            phoneInput.error = "Përdor formatin ndërkombëtar, p.sh. +355..."
+                            return@setOnClickListener
+                        }
+                        dialog.dismiss()
+                        requestPhoneVerification(phone)
+                    }
+                }
+                dialog.show()
+            }
+    }
+
+    private fun requestPhoneVerification(phoneNumber: String) {
+        if (phoneVerificationInProgress) {
+            toast("Verifikimi është në proces. Prit pak.")
+            return
+        }
+        val currentUser = auth.currentUser ?: run {
+            toast("Nuk u gjet llogaria aktive.")
+            return
+        }
+        phoneVerificationInProgress = true
+        toast("Po dërgohet kodi SMS...")
+
+        val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+            override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                phoneVerificationInProgress = false
+                linkPhoneCredential(credential, currentUser.uid)
+            }
+
+            override fun onVerificationFailed(e: com.google.firebase.FirebaseException) {
+                phoneVerificationInProgress = false
+                toast("Verifikimi dështoi: ${e.localizedMessage ?: "Kontrollo numrin dhe konfigurimin Firebase."}")
+            }
+
+            override fun onCodeSent(verificationId: String, token: PhoneAuthProvider.ForceResendingToken) {
+                phoneVerificationInProgress = false
+                showPhoneCodeDialog(verificationId, currentUser.uid)
+            }
+        }
+
+        val options = PhoneAuthOptions.newBuilder(auth)
+            .setPhoneNumber(phoneNumber)
+            .setTimeout(60L, TimeUnit.SECONDS)
+            .setActivity(this)
+            .setCallbacks(callbacks)
+            .build()
+        PhoneAuthProvider.verifyPhoneNumber(options)
+    }
+
+    private fun showPhoneCodeDialog(verificationId: String, expectedUid: String) {
+        val codeInput = EditText(this).apply {
+            hint = "Kodi 6-shifror SMS"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Verifiko numrin")
+            .setMessage("Shkruaj kodin që të erdhi me SMS.")
+            .setView(codeInput)
+            .setNegativeButton("ANULO", null)
+            .setPositiveButton("VERIFIKO", null)
+            .create().also { dialog ->
+                dialog.setOnShowListener {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val code = codeInput.text.toString().trim()
+                        if (code.length != 6) {
+                            codeInput.error = "Kodi duhet të ketë 6 shifra."
+                            return@setOnClickListener
+                        }
+                        dialog.dismiss()
+                        val credential = PhoneAuthProvider.getCredential(verificationId, code)
+                        linkPhoneCredential(credential, expectedUid)
+                    }
+                }
+                dialog.show()
+            }
+    }
+
+    private fun linkPhoneCredential(credential: PhoneAuthCredential, expectedUid: String) {
+        val currentUser = auth.currentUser
+        if (currentUser == null || currentUser.uid != expectedUid) {
+            toast("Llogaria ka ndryshuar. Hyr përsëri me emailin e vjetër.")
+            return
+        }
+        currentUser.linkWithCredential(credential)
+            .addOnSuccessListener { result ->
+                val linkedUser = result.user ?: auth.currentUser
+                if (linkedUser == null || linkedUser.uid != expectedUid) {
+                    toast("Nuk u verifikua ID-ja e llogarisë. Të dhënat nuk u ndryshuan.")
+                    return@addOnSuccessListener
+                }
+                val phone = linkedUser.phoneNumber
+                val update = hashMapOf<String, Any>("updatedAt" to FieldValue.serverTimestamp())
+                if (!phone.isNullOrBlank()) update["phoneNumber"] = phone
+                db.collection("users").document(expectedUid)
+                    .set(update, com.google.firebase.firestore.SetOptions.merge())
+                    .addOnSuccessListener {
+                        toast("Numri u lidh me sukses! Llogaria dhe bisedat mbetën të njëjta.")
+                        showHome()
+                    }
+                    .addOnFailureListener { e ->
+                        toast("Numri u lidh në Firebase Auth, por profili nuk u përditësua: ${e.localizedMessage}")
+                    }
+            }
+            .addOnFailureListener { e ->
+                val message = when (e) {
+                    is com.google.firebase.auth.FirebaseAuthUserCollisionException -> "Ky numër është i lidhur me një llogari tjetër. Nuk u krijua llogari e re dhe bisedat nuk u prekën."
+                    is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException -> "Kodi SMS është i pavlefshëm ose ka skaduar."
+                    else -> "Nuk u lidh numri: ${e.localizedMessage ?: "Gabim i panjohur"}"
+                }
+                toast(message)
+            }
     }
 }
