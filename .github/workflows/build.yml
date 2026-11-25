@@ -25,9 +25,9 @@ jobs:
 
       - name: Generate Debug Keystore
         run: |
-          mkdir -p ~/.config/.android
+          mkdir -p ~/.android
           keytool -genkeypair -v \
-            -keystore ~/.config/.android/debug.keystore \
+            -keystore ~/.android/debug.keystore \
             -storepass android \
             -alias AndroidDebugKey \
             -keypass android \
