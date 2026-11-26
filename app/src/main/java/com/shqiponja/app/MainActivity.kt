@@ -93,6 +93,7 @@ class MainActivity : Activity() {
     private var zegoInitialized = false
     private var zegoInitializing = false
     private var selectedHomeTab = "chats"
+    private var isChatRoomOpen = false
 
     private var mediaRecorder: MediaRecorder? = null
     private var recordingFile: File? = null
@@ -286,6 +287,28 @@ class MainActivity : Activity() {
         layout.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         layout.addView(copy, LinearLayout.LayoutParams(-1, -2))
         setContentView(layout)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        when {
+            isChatRoomOpen -> {
+                messagesListener?.remove()
+                isChatRoomOpen = false
+                showHome()
+            }
+            selectedHomeTab != "chats" -> {
+                selectedHomeTab = "chats"
+                showHome()
+            }
+            else -> {
+                AlertDialog.Builder(this)
+                    .setMessage("Dëshiron të dalësh nga SHQIPONJA?")
+                    .setNegativeButton("QËNDRO", null)
+                    .setPositiveButton("DIL") { _, _ -> finish() }
+                    .show()
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -576,6 +599,7 @@ class MainActivity : Activity() {
     // 5. EKRANI KRYESOR WHATSAPP (BISEDAT | PËRDORUESIT | PROFILI)
     // ---------------------------------------------------------
     private fun showHome() {
+        isChatRoomOpen = false
         // Shërbimet opsionale nisen vetëm pasi ndërtohet dhe shfaqet ekrani.
         val rootFrame = FrameLayout(this).apply {
             setBackgroundColor(pageBackground)
@@ -1242,6 +1266,7 @@ class MainActivity : Activity() {
     // ---------------------------------------------------------
     private fun openChatRoom(chatId: String, otherUserId: String, otherUsername: String) {
         messagesListener?.remove()
+        isChatRoomOpen = true
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1264,6 +1289,7 @@ class MainActivity : Activity() {
             setPadding(dp(8), dp(4), dp(12), dp(4))
             setOnClickListener {
                 messagesListener?.remove()
+                isChatRoomOpen = false
                 showHome()
             }
         }
