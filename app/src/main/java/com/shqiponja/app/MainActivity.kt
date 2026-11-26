@@ -1499,15 +1499,13 @@ class MainActivity : Activity() {
                     val quotedText = doc.getString("replyText")
                     if (!quotedText.isNullOrBlank()) {
                         val quote = TextView(this).apply {
-                            text = "↪ $quotedText"
-                            textSize = 12f
-                            setTextColor(secondaryText)
-                            setPadding(0, dp(3), 0, 0)
-                            maxLines = 2
-                        }
-                        bubble.addView(quote, 0)
-                    }
-
+    this.text = "↪ $quotedText"
+    textSize = 12f
+    setTextColor(secondaryText)
+    setPadding(0, dp(3), 0, 0)
+    maxLines = 2
+}
+bubble.addView(quote, 0)
                     bubble.setOnLongClickListener {
                         val choices = if (isMine) arrayOf("Përgjigju", "Modifiko", "Fshi") else arrayOf("Përgjigju")
                         AlertDialog.Builder(this@MainActivity)
