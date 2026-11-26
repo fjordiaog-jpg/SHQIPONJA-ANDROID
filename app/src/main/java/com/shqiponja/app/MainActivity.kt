@@ -1505,7 +1505,8 @@ class MainActivity : Activity() {
     setPadding(0, dp(3), 0, 0)
     maxLines = 2
 }
-bubble.addView(quote, 0)
+bubble.addView(quote, 0) 
+                    }
                     bubble.setOnLongClickListener {
                         val choices = if (isMine) arrayOf("Përgjigju", "Modifiko", "Fshi") else arrayOf("Përgjigju")
                         AlertDialog.Builder(this@MainActivity)
