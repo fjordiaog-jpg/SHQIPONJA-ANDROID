@@ -9,6 +9,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.MediaPlayer
@@ -46,6 +51,7 @@ class MainActivity : Activity() {
 
     private val PICK_PROFILE_IMAGE = 1001
     private val PICK_CHAT_IMAGE = 1002
+    private val TAKE_CHAT_PHOTO = 1003
 
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
@@ -1499,14 +1505,15 @@ class MainActivity : Activity() {
                     val quotedText = doc.getString("replyText")
                     if (!quotedText.isNullOrBlank()) {
                         val quote = TextView(this).apply {
-    this.text = "↪ $quotedText"
-    textSize = 12f
-    setTextColor(secondaryText)
-    setPadding(0, dp(3), 0, 0)
-    maxLines = 2
-}
-bubble.addView(quote, 0) 
+                            text = "↪ $quotedText"
+                            textSize = 12f
+                            setTextColor(secondaryText)
+                            setPadding(0, dp(3), 0, 0)
+                            maxLines = 2
+                        }
+                        bubble.addView(quote, 0)
                     }
+
                     bubble.setOnLongClickListener {
                         val choices = if (isMine) arrayOf("Përgjigju", "Modifiko", "Fshi") else arrayOf("Përgjigju")
                         AlertDialog.Builder(this@MainActivity)
@@ -1602,6 +1609,42 @@ bubble.addView(quote, 0)
 
         inputCard.addView(input)
         inputCard.addView(attachBtn)
+
+        // Ikona e kameres e vizatuar (jo emoji), ne stilin e WhatsApp
+        val cameraBtn = object : View(this) {
+            private val cameraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = secondaryText
+                style = Paint.Style.STROKE
+                strokeWidth = dp(2).toFloat()
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
+            }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val w = width.toFloat()
+                val h = height.toFloat()
+                val left = w * 0.16f
+                val top = h * 0.31f
+                val right = w * 0.84f
+                val bottom = h * 0.76f
+                canvas.drawRoundRect(RectF(left, top, right, bottom), dp(4).toFloat(), dp(4).toFloat(), cameraPaint)
+                val lens = RectF(w * 0.39f, h * 0.40f, w * 0.61f, h * 0.68f)
+                canvas.drawOval(lens, cameraPaint)
+                val flash = Path().apply {
+                    moveTo(w * 0.29f, top)
+                    lineTo(w * 0.38f, h * 0.19f)
+                    lineTo(w * 0.58f, h * 0.19f)
+                    lineTo(w * 0.66f, top)
+                }
+                canvas.drawPath(flash, cameraPaint)
+            }
+        }.apply {
+            contentDescription = "Kamera"
+            layoutParams = LinearLayout.LayoutParams(dp(34), dp(42))
+            setPadding(dp(5), dp(5), dp(5), dp(5))
+            setOnClickListener { openChatCamera(chatId) }
+        }
+        inputCard.addView(cameraBtn)
 
         val actionBtn = TextView(this).apply {
             text = "🎤"
@@ -1761,11 +1804,63 @@ bubble.addView(quote, 0)
         startActivityForResult(intent, PICK_PROFILE_IMAGE)
     }
 
+    private fun openChatCamera(chatId: String) {
+        pendingUploadChatId = chatId
+        val cameraIntent = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
+        if (cameraIntent.resolveActivity(packageManager) != null) {
+            startActivityForResult(cameraIntent, TAKE_CHAT_PHOTO)
+        } else {
+            toast("Nuk u gjet aplikacion kamere në telefon.")
+        }
+    }
+
+    private fun uploadChatImage(uri: Uri, chatId: String) {
+        val currentUid = auth.currentUser?.uid ?: return
+        val ref = storage.reference.child("chat_images/${UUID.randomUUID()}.jpg")
+        ref.putFile(uri).addOnSuccessListener {
+            ref.downloadUrl.addOnSuccessListener { downloadUri ->
+                val msgData = hashMapOf(
+                    "senderId" to currentUid,
+                    "text" to "🖼️ Foto",
+                    "type" to "image",
+                    "mediaUrl" to downloadUri.toString(),
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+                db.collection("chats").document(chatId).collection("messages").add(msgData)
+                db.collection("chats").document(chatId).update(
+                    mapOf("lastMessage" to "🖼️ Foto", "createdAt" to FieldValue.serverTimestamp())
+                )
+                toast("Fotoja u dërgua!")
+            }
+        }.addOnFailureListener { error ->
+            toast("Gabim gjatë dërgimit të fotos: ${error.message}")
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode != RESULT_OK || data?.data == null) return
-        val uri = data.data ?: return
+        if (resultCode != RESULT_OK) return
 
+        if (requestCode == TAKE_CHAT_PHOTO) {
+            val chatId = pendingUploadChatId ?: return
+            val bitmap = data?.extras?.get("data") as? Bitmap
+            if (bitmap == null) {
+                toast("Kamera nuk ktheu fotografinë. Provo përsëri.")
+                return
+            }
+            try {
+                val photoFile = File(cacheDir, "chat_camera_${System.currentTimeMillis()}.jpg")
+                photoFile.outputStream().use { output ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
+                }
+                uploadChatImage(Uri.fromFile(photoFile), chatId)
+            } catch (error: Exception) {
+                toast("Nuk u ruajt fotografia: ${error.message}")
+            }
+            return
+        }
+
+        val uri = data?.data ?: return
         if (requestCode == PICK_PROFILE_IMAGE) {
             val uid = auth.currentUser?.uid ?: return
             val ref = storage.reference.child("profiles/$uid.jpg")
@@ -1778,23 +1873,7 @@ bubble.addView(quote, 0)
             }
         } else if (requestCode == PICK_CHAT_IMAGE) {
             val chatId = pendingUploadChatId ?: return
-            val currentUid = auth.currentUser?.uid ?: return
-            val ref = storage.reference.child("chat_images/${UUID.randomUUID()}.jpg")
-            ref.putFile(uri).addOnSuccessListener {
-                ref.downloadUrl.addOnSuccessListener { downloadUri ->
-                    val msgData = hashMapOf(
-                        "senderId" to currentUid,
-                        "text" to "🖼️ Foto",
-                        "type" to "image",
-                        "mediaUrl" to downloadUri.toString(),
-                        "createdAt" to FieldValue.serverTimestamp()
-                    )
-                    db.collection("chats").document(chatId).collection("messages").add(msgData)
-                    db.collection("chats").document(chatId).update(
-                        mapOf("lastMessage" to "🖼️ Foto", "createdAt" to FieldValue.serverTimestamp())
-                    )
-                }
-            }
+            uploadChatImage(uri, chatId)
         }
     }
 
